@@ -1,3 +1,16 @@
+"""Module to fit signal data.
+
+Loads histogram from a ROOT file. Fits Gauss conv. w. Gauss (or three Gauss')
+to the histogram data with RooFit. Saves result to a ROOT file and saves plot
+to a JPEG file.
+
+    Typical usage example:
+    
+    In Bash command line,
+        >> python3 signal_fitting.py
+"""
+
+import os
 from ROOT import *
 
 ROOT.EnableImplicitMT()
@@ -57,26 +70,17 @@ def fit (histogram, process_name, outfile_name):
     outfile = TFile(outfile_name, 'RECREATE')
 
     # Create workspace
-    w = RooWorkspace('workspace_' + process_name)
+    w = RooWorkspace('w')
 
     # Create signal models
-    w.factory('Gaussian::gauss_chi2(mass[100,150],mean_gc[115,135],sigma_gc[0.01,20])')
-    w.factory('Gaussian::gauss_mle(mass[100,150],mean_gm[115,135],sigma_gm[0.01,20])')
-    w.factory('BreitWigner::breitwigner_chi2'
-              '(mass[100,150],mean_bc[115,135],width_bc[0.01,20])')
-    w.factory('BreitWigner::breitwigner_mle'
-              '(mass[100,150],mean_bm[115,135],width_bm[0.01,20])')
-    w.factory('Voigtian::voigtian_chi2'
-              '(mass[100,150],mean_vc[115,135],sigma_vc[0.01,20],width_vc[0.01,20])')
-    w.factory('Voigtian::voigtian_mle'
-              '(mass[100,150],mean_vm[115,135],sigma_vm[0.01,20],width_vm[0.01,20])')
-    w.factory('CrystalBall::crystalball_chi2'
-              '(mass[100,150],x0_cc[115,135],sigmaL_cc[0.01,20],sigmaR_cc[0.01,20],'
-              'alphaL_cc[0,10],nL_cc[0,10],alphaR_cc[0,10],nR_cc[0,10])')
-    w.factory('CrystalBall::crystalball_mle'
-              '(mass[100,150],x0_cm[115,135],sigmaL_cm[0.01,20],sigmaR_cm[0.01,20],'
-              'alphaL_cm[0,10],nL_cm[0,10],alphaR_cm[0,10],nR_cm[0,10])')
-    w.factory('SUM::two_gauss_chi2(f[0,1]*Gaussian::g1(mass[100,150], mean1[115,135],sigma1[0.01,30]), Gaussian::g2(mass, mean2[115,135],sigma2[0.01,30]))')
+    w.factory('Gaussian::g1(mass[100,150],mean1[115,135],sigma1[0.01,30])')
+    w.factory('Gaussian::g2(mass,mean2[115,135],sigma2[0.01,30])')
+    w.factory('Gaussian::g3(mass,mean3[115,135],sigma3[0.01,30])')
+    
+    w.factory('SUM::two_gauss_chi2(g2frac[0,1]*g2, g1)')
+    w.factory('SUM::three_gauss_chi2(g3frac[0,1]*g3, two_gauss_chi2)')
+    w.factory('SUM::two_gauss_mle(g2frac*g2, g1)')
+    w.factory('SUM::three_gauss_mle(g3frac*g3, two_gauss_mle)')
 
     # Create data histogram
     data_hist = RooDataHist('data_' + process_name, process_name,
@@ -84,15 +88,10 @@ def fit (histogram, process_name, outfile_name):
     w.Import(data_hist)
     
     # Fit signal models & save snapshots
-    list_of_models_chi2 = ['gauss_chi2',
-                           'breitwigner_chi2',
-                           'voigtian_chi2',
-                           'crystalball_chi2',
-                           'two_gauss_chi2']
-    list_of_models_mle  = ['gauss_mle',
-                           'breitwigner_mle',
-                           'voigtian_mle',
-                           'crystalball_mle']
+    list_of_models_chi2 = ['two_gauss_chi2',
+                           'three_gauss_chi2']
+    list_of_models_mle  = ['two_gauss_mle',
+                           'three_gauss_mle']
     
     for model in list_of_models_chi2:
         res = w.pdf(model).chi2FitTo(data_hist, RooFit.Save())
@@ -105,37 +104,9 @@ def fit (histogram, process_name, outfile_name):
         params = w.pdf(model).getParameters(RooArgSet(w.var('mass')))
         w.saveSnapshot('snapshot_' + model, params)
         res.Write('res_' + model)
-    
-    # res_gauss_chi2       = w.pdf('gauss_chi2').chi2FitTo(data_hist, RooFit.Save())
-    # res_breitwigner_chi2 = w.pdf('breitwigner_chi2').chi2FitTo(data_hist, RooFit.Save())
-    # res_voigtian_chi2    = w.pdf('voigtian_chi2').chi2FitTo(data_hist, RooFit.Save())
-    # res_crystalball_chi2 = w.pdf('crystalball_chi2').chi2FitTo(data_hist, RooFit.Save())
-    # res_gauss_mle        = w.pdf('gauss_mle').fitTo(data_hist, RooFit.Save())
-    # res_breitwigner_mle  = w.pdf('breitwigner_mle').fitTo(data_hist, RooFit.Save())
-    # res_voigtian_mle     = w.pdf('voigtian_mle').fitTo(data_hist, RooFit.Save())
-    # res_crystalball_mle  = w.pdf('crystalball_mle').fitTo(data_hist, RooFit.Save())
 
     w.writeToFile(outfile_name)
     outfile.Close()
-    
-    return
-
-
-def test ():
-    """Test functionality.
-    """
-    filename = '/home/submit/kyoon/CMSSW_10_6_27/src/Hrare/analysis/outname_mc10_Wcat.root'
-    h = fetch_histogram(filename, 'ZH_HCandMass', 'HCandMass from mc10 file')
-    fit(h, 'ZH', 'test_ZH_fit.root')
-
-    f = TFile('test_ZH_fit.root', 'READ')
-    w = f.workspace_ZH
-
-    models = ['gauss_chi2', 'breitwigner_chi2', 'voigtian_chi2', 'crystalball_chi2', 'two_gauss_chi2']
-    models += ['gauss_mle', 'breitwigner_mle', 'voigtian_mle', 'crystalball_mle']
-
-    for m in models:
-        plot_fit_results(w, 'data_ZH', 'snapshot_' + m, m, m + '.jpg')
     
     return
 
@@ -157,6 +128,9 @@ def plot_fit_results (workspace, data_name, snapshot_name, model_name, outfile_n
     Returns:
         (None)
     """
+    # Load snapshot
+    workspace.loadSnapshot(snapshot_name)
+    
     # Fit histogram
     frame1 = workspace.var('mass').frame(RooFit.Title('Fit of \"{}\"'.format(model_name)))
     workspace.data(data_name).plotOn(frame1)
@@ -194,7 +168,45 @@ def plot_fit_results (workspace, data_name, snapshot_name, model_name, outfile_n
     c.Print(outfile_name)
     
     return
+    
+    
+def signal_fitting ():
+    """Fit models to signals.
+    """
+    # Filenames
+    filename_ZH = '/home/submit/kyoon/CMSSW_10_6_27/src/Hrare/analysis/outname_mc10_Wcat.root'
+    filename_WH = '/home/submit/kyoon/CMSSW_10_6_27/src/Hrare/analysis/outname_mc11_Wcat.root'
+    
+    # Get histograms
+    hist_ZH = fetch_histogram(filename_ZH, 'ZH_HCandMass', 'HCandMass from mc10 file')
+    hist_WH = fetch_histogram(filename_WH, 'WH_HCandMass', 'HCandMass from mc11 file')
+    hist_combined = hist_ZH + hist_WH
+
+    # Perform fitting
+    fit(hist_ZH, 'ZH', 'ZH_fit.root')
+    fit(hist_WH, 'WH', 'WH_fit.root')
+    fit(hist_combined, 'ZH_WH_combined', 'ZH_WH_combined_fit.root')
+    
+    for process in ['ZH', 'WH', 'ZH_WH_combined']:
+        
+        # Fetch workspace
+        f = TFile(process + '_fit.root', 'READ')
+        w = f.w
+
+        # Plot    
+        output_dir = os.path.join(os.getcwd(), 'signal_fitting', process)
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        
+        models = ['two_gauss_chi2', 'three_gauss_chi2']
+        models += ['two_gauss_mle', 'three_gauss_mle']
+
+        for m in models:
+            savefile = os.path.join(output_dir, m + '.jpg')
+            plot_fit_results(w, 'data_' + process, 'snapshot_' + m, m, savefile)
+    
+    return
 
 
 if __name__ == '__main__':
-    test()
+    signal_fitting()
