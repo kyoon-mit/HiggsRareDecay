@@ -16,37 +16,37 @@ class RooAbsPdf;
 
 namespace RHD // Rare Higgs Decay
 {
-	class BackgroundPDFModels
-	{
-	public:
-		BackgroundPDFModels () {};
-		~BackgroundPDFModels () {};
+    class BackgroundPDFModels
+    {
+    public:
+        BackgroundPDFModels () {};
+        ~BackgroundPDFModels () {};
 
-		/* Make convolutions with Gaussian. */
-		void LaurentConvGaussian ( const char* prefix,
-								   RooAbsReal& ObsVar,
-								   RooRealVar& mu,
-								   RooRealVar& sigma,
-								      	  int  max_order );
-		
-	private:
-		/* Dictionary to store PDF models. */
-	    RooGaussian _Gaussian;
-		const RooAbsPdf* _Laurent;
-		// TODO: dictionary of PDFs
+        /* Make convolutions with Gaussian. */
+        void LaurentConvGaussian ( const char* prefix,
+                                   RooAbsReal& ObsVar,
+                                   RooRealVar& mu,
+                                   RooRealVar& sigma,
+                                          int  max_order );
+        
+    private:
+        /* Dictionary to store PDF models. */
+        RooGaussian _Gaussian;
+        const RooAbsPdf* _Laurent;
+        // TODO: dictionary of PDFs
 
-		/* Enum to check status of PDF models. */
-		enum PDFStatus { none, exists };
-		int _statusGaussian = PDFStatus::none;
+        /* Enum to check status of PDF models. */
+        enum PDFStatus { none, exists };
+        int _statusGaussian = PDFStatus::none;
 
-		/* Create and store basic PDFs. */
-		void makeGaussian ( RooAbsReal& ObsVar,
-							RooRealVar& mu,
-							RooRealVar& sigma );
-		void makeLaurentSeries ( const char* prefix,
-								 RooAbsReal& ObsVar,
-								        int  order );
-	};
+        /* Create and store basic PDFs. */
+        void makeGaussian ( RooAbsReal& ObsVar,
+                            RooRealVar& mu,
+                            RooRealVar& sigma );
+        void makeLaurentSeries ( const char* prefix,
+                                 RooAbsReal& ObsVar,
+                                        int  order );
+    };
   
 }
 
