@@ -7,6 +7,7 @@
 #define BACKGROUND_PDF_MODELS_H
 
 #include <string>
+#include <map>
 
 class RooAbsReal;
 class RooRealVar;
@@ -22,29 +23,33 @@ namespace RHD // Rare Higgs Decay
         BackgroundPDFModels () {};
         ~BackgroundPDFModels () {};
 
+        /* Fetch PDF model. */
+        RooAbsPdf* getPDF ( std::string key );
+
+        /* List keys of existing PDFs. */
+        void listPDFs ();
+
         /* Make convolutions with Gaussian. */
-        void LaurentConvGaussian ( const char* prefix,
-                                   RooAbsReal& ObsVar,
-                                   RooRealVar& mu,
-                                   RooRealVar& sigma,
-                                          int  max_order );
+        void makeLaurentConvGaussian ( RooRealVar& ObsVar,
+                                       RooRealVar& mu,
+                                       RooRealVar& sigma,
+                                              int  max_order );
         
     private:
-        /* Dictionary to store PDF models. */
-        RooGaussian _Gaussian;
-        const RooAbsPdf* _Laurent;
-        // TODO: dictionary of PDFs
-
+        /* Map to store PDF models. */
+        std::map<std::string, RooAbsPdf*> _PDFs;
+        std::map<std::string, RooRealVar*> _Parameters;
+        
         /* Enum to check status of PDF models. */
         enum PDFStatus { none, exists };
         int _statusGaussian = PDFStatus::none;
 
         /* Create and store basic PDFs. */
-        void makeGaussian ( RooAbsReal& ObsVar,
+        void makeGaussian ( RooRealVar& ObsVar,
                             RooRealVar& mu,
                             RooRealVar& sigma );
         void makeLaurentSeries ( const char* prefix,
-                                 RooAbsReal& ObsVar,
+                                 RooRealVar& ObsVar,
                                         int  order );
     };
   
