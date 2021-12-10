@@ -8,12 +8,15 @@
 
 #include <string>
 #include <map>
+#include <memory>
 
-class RooAbsReal;
+class RooArgList;
+
 class RooRealVar;
 
-class RooGaussian;
 class RooAbsPdf;
+class RooAddPdf;
+class RooGaussian;
 
 namespace RHD // Rare Higgs Decay
 {
@@ -23,34 +26,68 @@ namespace RHD // Rare Higgs Decay
         BackgroundPDFModels () {};
         ~BackgroundPDFModels () {};
 
-        /* Fetch PDF model. */
-        RooAbsPdf* getPDF ( std::string key );
+        /* Fetch PDF model.
+         * Example keys of some PDFs:
+         *   lau3_X_gauss
+         */
+        RooAbsPdf& getPDF ( std::string key );
 
         /* List keys of existing PDFs. */
         void listPDFs ();
 
         /* Make convolutions with Gaussian. */
-        void makeLaurentConvGaussian ( RooRealVar& ObsVar,
-                                       RooRealVar& mu,
-                                       RooRealVar& sigma,
-                                              int  max_order );
+        // void makeLaurentConvGaussian ( RooRealVar& ObsVar,
+        //                                        int min_order,
+        //                                        int max_order);
         
-    private:
+        /* Create basic PDFs. */
+        RooAbsPdf* makeGaussian ( RooRealVar& ObsVar );
+        RooAbsPdf* makeLaurentSeries ( RooRealVar& ObsVar, int order );        
+
+    protected:
         /* Map to store PDF models. */
-        std::map<std::string, RooAbsPdf*> _PDFs;
-        std::map<std::string, RooRealVar*> _Parameters;
-        
+        std::map<std::string, RooRealVar> _Parameters;
+        std::map<std::string, RooArgList> _RooArgLists;
+        std::map<std::string, std::unique_ptr<RooAbsPdf>> _PDFs;
+                
         /* Enum to check status of PDF models. */
         enum PDFStatus { none, exists };
         int _statusGaussian = PDFStatus::none;
 
-        /* Create and store basic PDFs. */
-        void makeGaussian ( RooRealVar& ObsVar,
-                            RooRealVar& mu,
-                            RooRealVar& sigma );
-        void makeLaurentSeries ( const char* prefix,
+    private:
+        /* Internally store PDFs and paramters. */
+        void storeRooRealVar ( std::string const& key,
+                                           double value,
+                                           double min,
+                                           double max );
+
+        void storeRooArgList ( std::string const& key,
+                                      RooArgList& list );
+
+        void storeRooGaussian ( std::string const& key,
+                                    RooRealVar& ObsVar,
+                                    RooRealVar& mu,
+                                    RooRealVar& sigma );
+
+        void storeRooPower ( std::string const& key,
                                  RooRealVar& ObsVar,
-                                        int  order );
+                                       float power );
+
+        void storeRooAddPdf ( std::string const& key,
+                                      RooArgList pdfs,
+                                      RooArgList coeffs,
+                                            bool recursive=false );
+        /*        
+        void storeGaussian ( std::string const& key,
+                                    RooRealVar& ObsVar,
+                                    RooRealVar& mu,
+                                    RooRealVar& sigma );
+        
+        void storeGaussian ( std::string const& key,
+                                    RooRealVar& ObsVar,
+                                    RooRealVar& mu,
+                                    RooRealVar& sigma );
+        */
     };
   
 }

@@ -3,6 +3,7 @@
 // --- std libraries ---
 #include <cmath>
 #include <iostream>
+#include <stdexcept>
 #include <vector>
 #include <algorithm>
 
@@ -17,6 +18,7 @@
 #include "RooRealVar.h"
 
 #include "RooAbsPdf.h"
+#include "RooAddPdf.h"
 #include "RooGaussian.h"
 #include "HiggsAnalysis/CombinedLimit/interface/HGGRooPdfs.h"
 
@@ -25,129 +27,211 @@ using namespace RooFit;
 
 namespace RHD
 {
-
-    RooAbsPdf* BackgroundPDFModels::getPDF ( std::string key )
-    /*
-     * Get PDF in private member data, _PDFs, according to its key.
-     */
-    {
-        if (_PDFs.find(key) == _PDFs.end()) {
-            std::cout << "PDF with the following key not found: ";
-            std::cout << key << std::endl;
-            return nullptr;
-        } else {
-            return (RooAbsPdf*) _PDFs.find(key)->second;
-        }
-    }
-
-    void BackgroundPDFModels::listPDFs ()
-    /*
-     * List all existing PDFs.
-     */
-    {
-        std::vector<std::string> keys{};
-        for (const auto &it: _PDFs) {
-            keys.emplace_back(it.first);
-        }
-        std::sort(keys.begin(), keys.end());
-        for (const auto &key: keys) {
-            std::cout << key << '\n';
-        }
-    }
-
-    void BackgroundPDFModels::makeLaurentConvGaussian ( RooRealVar& ObsVar,
-                                                        RooRealVar& mu,
-                                                        RooRealVar& sigma,
-                                                               int  max_order )
-    /*
-     * mu and sigma are variables of the Gaussian;
-     * max_order is the highest order of the Laurent Series.
-     */
-    {
-        // Make Gaussian if not exist
-        if (!_statusGaussian) {
-            this->makeGaussian(ObsVar, mu, sigma);
-        }
-
-        // Fetch Gaussian
-        RooAbsPdf* gauss_pdf = _PDFs.find("Gaussian")->second;
-
-        // Make Laurent Series
-        for (int order=1; order<=max_order; order++) {
-            const char* lau_name = Form("lau%d", order);
-            this->makeLaurentSeries(lau_name, ObsVar, order);
-            RooAbsPdf* lau_pdf = _PDFs.find(lau_name)->second;
-
-            // Make Convolution: Laurent Series (X) Gaussian
-            const char* conv_name = Form("%s_X_gauss", lau_name);
-            RooFFTConvPdf lauXgauss_pdf(conv_name, conv_name, ObsVar,
-                                        *lau_pdf, *gauss_pdf);
-            _PDFs.insert(std::pair<std::string, RooAbsPdf*>(conv_name,
-                                                            &lauXgauss_pdf));
-        }
-    }
-
+    // RooAbsPdf& BackgroundPDFModels::getPDF ( std::string key )
+    // /*
+    //  * Get PDF in private member data, _PDFs, according to its key.
+    //  */
+    // {
+    //     if (_PDFs.find(key) == _PDFs.end()) {
+    //         throw std::runtime_error("PDF with the following key not found: " + key);
+    //     } else {
+    //         return _PDFs[key];
+    //     }
+    // }
 
     
-    /* Private methods */
-    void BackgroundPDFModels::makeGaussian ( RooRealVar& ObsVar,
-                                             RooRealVar& mu,
-                                             RooRealVar& sigma )
-    {
-        static RooGaussian gauss_pdf("Gaussian", "Gaussian", ObsVar, mu, sigma);
-        _statusGaussian = PDFStatus::exists;
-        _PDFs.insert(std::pair<std::string, RooAbsPdf*>("Gaussian", &gauss_pdf));
-    }
+    // void BackgroundPDFModels::listPDFs ()
+    // /*
+    //  * List all existing PDFs.
+    //  */
+    // {
+    //     std::vector<std::string> keys{};
+    //     for (const auto &it: _PDFs) {
+    //         keys.emplace_back(it.first);
+    //     }
+    //     std::sort(keys.begin(), keys.end());
+    //     for (const auto &key: keys) {
+    //         std::cout << key << '\n';
+    //     }
+    // }
 
-    void BackgroundPDFModels::makeLaurentSeries ( const char* prefix,
-                                                  RooRealVar& ObsVar,
-                                                         int  order )
+        
+    // void BackgroundPDFModels::makeLaurentConvGaussian ( RooRealVar& ObsVar,
+    //                                                            int  min_order,
+    //                                                            int  max_order )
+    // /*
+    //  * min_order and max_order are the lowest and highest orders
+    //  * of the Laurent Series.
+    //  */
+    // {
+    //     // Make Gaussian if not exist
+    //     if (!_statusGaussian) {
+    //         this->makeGaussian(ObsVar);
+    //     }
+
+    //     // Fetch Gaussian
+    //     RooAbsPdf& gauss_pdf = _PDFs["Gaussian"];
+
+    //     char* lau_name;
+    //     char* conv_name;
+        
+    //     // Make Laurent Series
+    //     for (int order=min_order; order<=max_order; order++) {
+    //         this->makeLaurentSeries(ObsVar, order);
+    //         lau_name = Form("lau%d", order);
+    //         RooAbsPdf* lau_pdf = _PDFs.find(lau_name)->second.get();
+
+    //         // Make Convolution: Laurent Series (X) Gaussian
+    //         conv_name = Form("%s_X_gauss", lau_name);
+    //         RooFFTConvPdf lauXgauss_pdf(conv_name, conv_name, ObsVar,
+    //                                            *lau_pdf, *gauss_pdf);
+            
+    //         // Insert into map of PDFs
+    //         //storePDF(conv_name, std::make_unique<RooFFTConvPdf>(lauXgauss_pdf));
+    //         std::cout << "Created PDF with the following key: ";
+    //         std::cout << conv_name << std::endl;
+    //     }
+    // }
+
+    
+    RooAbsPdf* BackgroundPDFModels::makeGaussian ( RooRealVar& ObsVar )
+    {
+        double xlow = ObsVar.getMin();
+        double xhigh = ObsVar.getMax();
+        
+        storeRooRealVar("gauss_mu", (xhigh+xlow)/2., xlow, xhigh);
+        storeRooRealVar("gauss_sigma", (xhigh-xlow)/10., 1e-2, (xhigh-xlow)/2.);
+        storeRooGaussian("Gaussian", ObsVar,
+                      _Parameters["gauss_mu"],
+                      _Parameters["gauss_sigma"]);
+
+        return _PDFs["Gaussian"].get();
+    }
+    
+
+    RooAbsPdf* BackgroundPDFModels::makeLaurentSeries ( RooRealVar& ObsVar,
+                                                                int order )
     /*
      * For original code, see:
      * https://github.com/MiT-HEP/ChargedHiggs/blob/cmssw_94x/src/BackgroundFitter.cpp#L562-L595
      */
     {
-        static RooArgList args_coeff(Form("%s_coeffs", prefix));
-        static RooArgList args_power(Form("%s_powers", prefix));
-        const char* pow_name;
-        const char* var_name;
-        float central = -4.;
+        // Name and central order
+        auto prefix = Form("lau%d", order);
+        float central = -4.;        
 
-        // Central order (call it "0th" order)
-        pow_name = Form("%s_pow0", prefix);
-        static RooPower pow0(pow_name, pow_name, ObsVar, RooConst(central));
-        args_power.add(pow0);
-        _PDFs.insert(std::pair<std::string, RooAbsPdf*>(pow_name, &pow0));
-  
+        // Make RooArgLists
+        auto powlist_name = Form("%s_pdfs", prefix);
+        auto clist_name = Form("%s_coeffs", prefix);
+        auto args_coeff = RooArgList(clist_name);
+        auto args_power = RooArgList(powlist_name);
+        
+        // Loop setup
+        char* pow_name;
+        char* var_name;
         int nlower = int(ceil(order/2.));
         int nhigher = order - nlower;
-
+        
+        // Make central order (call it "0th" order)
+        pow_name = Form("%s_pow0", prefix);
+        storeRooPower(pow_name, ObsVar, central);
+        args_power.add(*_PDFs[pow_name]);
+            
         // Even terms
         for (int i=1; i<=nlower; i++) {
             var_name = Form("%s_l%d", prefix, i);
             pow_name = Form("%s_powl%d", prefix, i);
-            static RooRealVar var(var_name, var_name, 0.25/order, 1e-6, 1-1e-6);
-            static RooPower pow(pow_name, pow_name, ObsVar, RooConst(central-i));
-            args_coeff.add(var);
-            args_power.add(pow);
-            _Parameters.insert(std::pair<std::string, RooRealVar*>(var_name, &var));
-            _PDFs.insert(std::pair<std::string, RooAbsPdf*>(pow_name, &pow));
+            storeRooRealVar(var_name, 0.25/order, 1e-6, 1-1e-6);
+            storeRooPower(pow_name, ObsVar, central-i);
+            args_coeff.add(_Parameters[var_name]);
+            args_power.add(*_PDFs[pow_name]);
         }
 
         // Odd terms
         for (int i=1; i<=nhigher; i++) {
             var_name = Form("%s_h%d", prefix, i);
             pow_name = Form("%s_powh%d", prefix, i);
-            static RooRealVar var(var_name, var_name, 0.25/order, 1e-6, 1-1e-6);
-            static RooPower pow(pow_name, pow_name, ObsVar, RooConst(central+i));
-            args_coeff.add(var);
-            args_power.add(pow);
-            _Parameters.insert(std::pair<std::string, RooRealVar*>(var_name, &var));
-            _PDFs.insert(std::pair<std::string, RooAbsPdf*>(pow_name, &pow));
+            storeRooRealVar(var_name, 0.25/order, 1e-6, 1-1e-6);
+            storeRooPower(pow_name, ObsVar, central+i);
+            args_coeff.add(_Parameters[var_name]);
+            args_power.add(*_PDFs[pow_name]);
         }
+
+        storeRooArgList(clist_name, args_coeff);
+        storeRooArgList(powlist_name, args_power);
         
         // PDF
-        static RooAddPdf lau_pdf(prefix, prefix, args_power, args_coeff, true);
-        _PDFs.insert(std::pair<std::string, RooAbsPdf*>(prefix, &lau_pdf));
+        RooAbsPdf* pdf = new RooAddPdf(prefix, prefix, _RooArgLists[powlist_name], _RooArgLists[clist_name], true);
+        //storeRooAddPdf(prefix,// *args_power, *args_coeff, true);
+        //               _RooArgLists[powlist_name],
+        //               _RooArgLists[clist_name],
+        //               true);
+
+        return pdf;
+        // return _PDFs[prefix].get();
+    }
+
+    
+    /* Private methods for internal bookeeping. */
+    void BackgroundPDFModels::storeRooRealVar ( std::string const& key,
+                                                            double value,
+                                                            double min,
+                                                            double max )
+    {
+        const char* k  = key.c_str();
+        _Parameters.insert(std::pair<std::string, RooRealVar>
+                                 (k, RooRealVar(k, k, value, min, max)));      
+    }
+
+    void BackgroundPDFModels::storeRooArgList ( std::string const& key,
+                                                       RooArgList& list )
+    {
+        const char* k = key.c_str();
+        _RooArgLists.insert(std::pair<std::string, RooArgList> (k, list));
+    }
+    
+    void BackgroundPDFModels::storeRooGaussian ( std::string const& key,
+                                                        RooRealVar& ObsVar,
+                                                        RooRealVar& mu,
+                                                        RooRealVar& sigma )
+    {
+        const char* k = key.c_str();
+        _PDFs.insert(std::pair<std::string, std::unique_ptr<RooAbsPdf>>
+                     (k, std::make_unique<RooGaussian>
+                      (RooGaussian(k, k, ObsVar, mu, sigma))
+                     )
+                    );
+        _statusGaussian = PDFStatus::exists;
+        std::cout << "Created Gaussian PDF with the following key: ";
+        std::cout << key << std::endl;
+    }
+
+    void BackgroundPDFModels::storeRooPower ( std::string const& key,
+                                                     RooRealVar& ObsVar,
+                                                           float power )
+    {
+        const char* k = key.c_str();
+        _PDFs.insert(std::pair<std::string, std::unique_ptr<RooAbsPdf>>
+                     (k, std::make_unique<RooPower>
+                      (RooPower(k, k, ObsVar, RooConst(power)))
+                     )
+                    );
+        std::cout << "Created Power PDF with the following key: ";
+        std::cout << key << std::endl;
+    }
+
+    void BackgroundPDFModels::storeRooAddPdf ( std::string const& key,
+                                                       RooArgList pdfs,
+                                                       RooArgList coeffs,
+                                                             bool recursive )
+    {
+        const char* k = key.c_str();
+        _PDFs.insert(std::pair<std::string, std::unique_ptr<RooAbsPdf>>
+                     (k, std::make_unique<RooAddPdf>
+                      (RooAddPdf(k, k, pdfs, coeffs, recursive))
+                     )
+                    );
+        std::cout << "Created RooAddPdf with the following key: ";
+        std::cout << key << std::endl;
     }
 }
