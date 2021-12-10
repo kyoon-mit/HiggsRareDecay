@@ -20,6 +20,7 @@
 #include "RooAbsPdf.h"
 #include "RooAddPdf.h"
 #include "RooGaussian.h"
+#include "RooFFTConvPdf.h"
 #include "HiggsAnalysis/CombinedLimit/interface/HGGRooPdfs.h"
 
 using namespace RHD; // TODO: delete this line after testing
@@ -56,42 +57,31 @@ namespace RHD
     // }
 
         
-    // void BackgroundPDFModels::makeLaurentConvGaussian ( RooRealVar& ObsVar,
-    //                                                            int  min_order,
-    //                                                            int  max_order )
-    // /*
-    //  * min_order and max_order are the lowest and highest orders
-    //  * of the Laurent Series.
-    //  */
-    // {
-    //     // Make Gaussian if not exist
-    //     if (!_statusGaussian) {
-    //         this->makeGaussian(ObsVar);
-    //     }
+    RooAbsPdf* BackgroundPDFModels::makeLaurentConvGaussian ( RooRealVar& ObsVar,
+                                                                      int order )
+    {
+        // Make Gaussian if not exist
+        RooAbsPdf* gauss_pdf;
+        if (!_statusGaussian) {
+            gauss_pdf = makeGaussian(ObsVar);
+        } else {
+            gauss_pdf = _PDFs["Gaussian"].get();
+        }
 
-    //     // Fetch Gaussian
-    //     RooAbsPdf& gauss_pdf = _PDFs["Gaussian"];
+        // Make Laurent Series
+        RooAbsPdf* lau_pdf = makeLaurentSeries(ObsVar, order);
 
-    //     char* lau_name;
-    //     char* conv_name;
-        
-    //     // Make Laurent Series
-    //     for (int order=min_order; order<=max_order; order++) {
-    //         this->makeLaurentSeries(ObsVar, order);
-    //         lau_name = Form("lau%d", order);
-    //         RooAbsPdf* lau_pdf = _PDFs.find(lau_name)->second.get();
+        // Make Convolution: Laurent Series (X) Gaussian
+        auto conv_name = Form("lau%d_X_gauss", order);
+        _PDFs.insert(std::pair<std::string, std::unique_ptr<RooAbsPdf>>
+                     (conv_name, std::make_unique<RooFFTConvPdf>
+                      (RooFFTConvPdf(conv_name, conv_name,
+                                     ObsVar, *lau_pdf, *gauss_pdf))
+                     )
+                    );
 
-    //         // Make Convolution: Laurent Series (X) Gaussian
-    //         conv_name = Form("%s_X_gauss", lau_name);
-    //         RooFFTConvPdf lauXgauss_pdf(conv_name, conv_name, ObsVar,
-    //                                            *lau_pdf, *gauss_pdf);
-            
-    //         // Insert into map of PDFs
-    //         //storePDF(conv_name, std::make_unique<RooFFTConvPdf>(lauXgauss_pdf));
-    //         std::cout << "Created PDF with the following key: ";
-    //         std::cout << conv_name << std::endl;
-    //     }
-    // }
+        return _PDFs[conv_name].get();
+    }
 
     
     RooAbsPdf* BackgroundPDFModels::makeGaussian ( RooRealVar& ObsVar )
@@ -102,15 +92,15 @@ namespace RHD
         storeRooRealVar("gauss_mu", (xhigh+xlow)/2., xlow, xhigh);
         storeRooRealVar("gauss_sigma", (xhigh-xlow)/10., 1e-2, (xhigh-xlow)/2.);
         storeRooGaussian("Gaussian", ObsVar,
-                      _Parameters["gauss_mu"],
-                      _Parameters["gauss_sigma"]);
+                          _Parameters["gauss_mu"],
+                          _Parameters["gauss_sigma"]);
 
         return _PDFs["Gaussian"].get();
     }
     
 
     RooAbsPdf* BackgroundPDFModels::makeLaurentSeries ( RooRealVar& ObsVar,
-                                                                int order )
+                                                               int order )
     /*
      * For original code, see:
      * https://github.com/MiT-HEP/ChargedHiggs/blob/cmssw_94x/src/BackgroundFitter.cpp#L562-L595
@@ -161,7 +151,7 @@ namespace RHD
         storeRooArgList(powlist_name, args_power);
         
         // PDF
-        RooAbsPdf* pdf = new RooAddPdf(prefix, prefix, _RooArgLists[powlist_name], _RooArgLists[clist_name], true);
+        RooAddPdf* pdf = new RooAddPdf(prefix, prefix, _RooArgLists[powlist_name], _RooArgLists[clist_name], true); // This is the only method that works
         //storeRooAddPdf(prefix,// *args_power, *args_coeff, true);
         //               _RooArgLists[powlist_name],
         //               _RooArgLists[clist_name],

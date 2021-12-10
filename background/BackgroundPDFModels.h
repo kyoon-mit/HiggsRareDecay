@@ -36,12 +36,12 @@ namespace RHD // Rare Higgs Decay
         void listPDFs ();
 
         /* Make convolutions with Gaussian. */
-        // void makeLaurentConvGaussian ( RooRealVar& ObsVar,
-        //                                        int min_order,
-        //                                        int max_order);
+        RooAbsPdf* makeLaurentConvGaussian ( RooRealVar& ObsVar, int order );
         
         /* Create basic PDFs. */
         RooAbsPdf* makeGaussian ( RooRealVar& ObsVar );
+
+        /* Create series PDFs. Make sure to delete. */
         RooAbsPdf* makeLaurentSeries ( RooRealVar& ObsVar, int order );        
 
     protected:
@@ -49,6 +49,7 @@ namespace RHD // Rare Higgs Decay
         std::map<std::string, RooRealVar> _Parameters;
         std::map<std::string, RooArgList> _RooArgLists;
         std::map<std::string, std::unique_ptr<RooAbsPdf>> _PDFs;
+        std::map<std::string, RooAddPdf> _RooAddPdfs;
                 
         /* Enum to check status of PDF models. */
         enum PDFStatus { none, exists };
@@ -65,13 +66,13 @@ namespace RHD // Rare Higgs Decay
                                       RooArgList& list );
 
         void storeRooGaussian ( std::string const& key,
-                                    RooRealVar& ObsVar,
-                                    RooRealVar& mu,
-                                    RooRealVar& sigma );
+                                       RooRealVar& ObsVar,
+                                       RooRealVar& mu,
+                                       RooRealVar& sigma );
 
         void storeRooPower ( std::string const& key,
-                                 RooRealVar& ObsVar,
-                                       float power );
+                                    RooRealVar& ObsVar,
+                                          float power );
 
         void storeRooAddPdf ( std::string const& key,
                                       RooArgList pdfs,
