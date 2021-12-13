@@ -9,6 +9,7 @@
 #include "TTreeReader.h"
 #include "TTreeReaderValue.h"
 #include "BackgroundPDFModels.h"
+#include "BackgroundFitting.h"
 #include "RooRealVar.h"
 #include "RooAbsPdf.h"
 #include "RooDataHist.h"
@@ -18,7 +19,7 @@
 using namespace RHD;
 using namespace RooFit;
 
-void fit_01()
+void test()
 {
     // Create background histograms from file
     Float_t xlow = 40., xhigh = 200.;
@@ -47,25 +48,25 @@ void fit_01()
     // Make model(s)
     auto m = BackgroundPDFModels();
     RooAbsPdf* gauss = m.makeGaussian(mH);
-    RooAbsPdf* lau3 = m.makeLaurentSeries(mH, 3);
+    RooAbsPdf* lau1_X_gauss = m.makeLaurentConvGaussian(mH, 1);
+    RooAbsPdf* lau2_X_gauss = m.makeLaurentConvGaussian(mH, 2);
     RooAbsPdf* lau3_X_gauss = m.makeLaurentConvGaussian(mH, 3);
-    //m.makeLaurentConvGaussian(mH, 1, 1);
-    //auto gauss = m.getPDF("Gaussian");
-    //RooAbsPdf* lau1_X_gauss = m.getPDF("lau1_X_gauss");
-    //RooAbsPdf* lau2_X_gauss = m.getPDF("lau2_X_gauss");
-    //RooAbsPdf* lau3_X_gauss = m.getPDF("lau3_X_gauss");
-    //RooAbsPdf* lau4_X_gauss = m.getPDF("lau4_X_gauss");
-    //std::shared_ptr<RooAbsPdf> lau5_X_gauss = m.getPDF("lau5_X_gauss");
+    RooAbsPdf* lau4_X_gauss = m.makeLaurentConvGaussian(mH, 4);
+    RooAbsPdf* lau5_X_gauss = m.makeLaurentConvGaussian(mH, 5);
 
     // Perform fit
-    RooDataHist datahist("bkg_comb", "bkg_comb", RooArgList(mH), &bkg_comb);
+    auto f = BackgroundFitting();
+    auto datahist = f.makeBinnedData("bkg_comb", mH, bkg_comb);
+    RooFitResult fitresult = f.performChi2Fit(lau3_X_gauss, &datahist, 5);
 
-    gauss->chi2FitTo(datahist,
-                            RooFit::Minimizer("Minuit2", "minimize"));
-    lau3->chi2FitTo(datahist, RooFit::Minimizer("Minuit2", "minimize"));
-    lau3_X_gauss->chi2FitTo(datahist, RooFit::Minimizer("Minuit2", "minimize"));
+    std::cout << fitresult.status() << std::endl;
+    fitresult.Print();
 
-    delete lau3;
+    //gauss->chi2FitTo(datahist,
+    //                        RooFit::Minimizer("Minuit2", "minimize"));
+    //lau3->chi2FitTo(datahist, RooFit::Minimizer("Minuit2", "minimize"));
+    //lau3_X_gauss->chi2FitTo(datahist, RooFit::Minimizer("Minuit2", "minimize"));
+
 //lau2_X_gauss->chi2FitTo(datahist,
 //                            RooFit::Minimizer("Minuit2", "minimize"));
 //lau3_X_gauss->chi2FitTo(datahist,
