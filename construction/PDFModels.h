@@ -36,13 +36,31 @@ namespace RHD // Rare Higgs Decay
         void listPDFs ();
 
         /* Make convolutions with Gaussian. */
+        RooAbsPdf* makeExponentialConvGaussian ( RooRealVar& ObsVar, int order ); //
+        RooAbsPdf* makePowerConvGaussian ( RooRealVar& ObsVar, int order ); //
+        RooAbsPdf* makeBernsteinConvGaussian ( RooRealVar& ObsVar, int order ); //
         RooAbsPdf* makeLaurentConvGaussian ( RooRealVar& ObsVar, int order );
         
-        /* Create basic PDFs. */
+        /* Create signal PDFs. */
         RooAbsPdf* makeGaussian ( RooRealVar& ObsVar );
+        RooAbsPdf* makeBreitWigner ( RooRealVar& ObsVar ); //
+        RooAbsPdf* makeVoigtian ( RooRealVar& ObsVar ); //
+        RooAbsPdf* makeDoubleGaussian ( RooRealVar& ObsVar ); //test
+        RooAbsPdf* makeTripleGaussian ( RooRealVar& ObsVar );
 
-        /* Create series PDFs. Make sure to delete. */
-        RooAbsPdf* makeLaurentSeries ( RooRealVar& ObsVar, int order );        
+        /* Create falling spectrum PDFs. Make sure to delete. */
+        RooAbsPdf* makeExponentialSeries ( RooRealVar& ObsVar, int order ); //
+        RooAbsPdf* makePowerSeries ( RooRealVar& ObsVar, int order ); //
+        RooAbsPdf* makeBernsteinPoly ( RooRealVar& ObsVar, int order);
+        RooAbsPdf* makeBernsteinFast ( RooRealVar& ObsVar, int order); // see if any difference
+        RooAbsPdf* makeLaurentSeries ( RooRealVar& ObsVar, int order );
+
+        /* The following methods return a pointer created with "new"
+         * makeDoubleGaussian
+         * makeTripleGaussian
+         * makeBernsteinPoly
+         * makeLaurentSeries
+         */
 
     protected:
         /* Map to store PDF models. */
@@ -57,34 +75,46 @@ namespace RHD // Rare Higgs Decay
 
     private:
         /* Internally store PDFs and paramters. */
-        void storeRooRealVar ( std::string const& key,
-                                           double value,
-                                           double min,
-                                           double max );
+        void storeRooRealVar ( const char* key,
+                                    double value,
+                                    double min,
+                                    double max );
 
-        void storeRooArgList ( std::string const& key,
-                                      RooArgList& list );
+        void storeRooRealVar ( const char* key,
+                                    double min,
+                                    double max );
 
-        void storeRooGaussian ( std::string const& key,
-                                       RooRealVar& ObsVar,
-                                       RooRealVar& mu,
-                                       RooRealVar& sigma );
+        void storeRooArgList ( const char* key,
+                               RooArgList& list );
 
-        void storeRooPower ( std::string const& key,
-                                    RooRealVar& ObsVar,
-                                          float power );
+        void storeRooGaussian ( const char* key,
+                                RooRealVar& ObsVar,
+                                RooRealVar& mu,
+                                RooRealVar& sigma );
 
-        void storeRooAddPdf ( std::string const& key,
-                                      RooArgList pdfs,
-                                      RooArgList coeffs,
-                                            bool recursive=false );
+        void storeRooPower ( const char* key,
+                             RooRealVar& ObsVar,
+                                   float power );
+
+        void storeRooBernstein ( const char* key,
+                                 RooRealVar& ObsVar,
+                                 RooArgList& coeffs );
+
+        void storeRooAddPdf ( const char* key,
+                              RooArgList& pdfs,
+                              RooArgList& coeffs,
+                                     bool recursive=false );
+
+        void storeRooGenericPdf ( const char* key,
+                                  const char* formula,
+                                  RooArgList& param_list );
         /*        
-        void storeGaussian ( std::string const& key,
+        void storeGaussian ( const char* key,
                                     RooRealVar& ObsVar,
                                     RooRealVar& mu,
                                     RooRealVar& sigma );
         
-        void storeGaussian ( std::string const& key,
+        void storeGaussian ( const char* key,
                                     RooRealVar& ObsVar,
                                     RooRealVar& mu,
                                     RooRealVar& sigma );
