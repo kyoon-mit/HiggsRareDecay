@@ -35,6 +35,13 @@ namespace RHD // Rare Higgs Decay
         /* List keys of existing PDFs. */
         void listPDFs ();
 
+        /* Set parameter values. */
+        void setVal ( std::string const& paramKey, double value );
+        void setMultiVals (        const char* prefix,
+                                           int lowOrder,
+                                           int highOrder,
+                            std::vector<double> values );
+
         /* Make convolutions with Gaussian. */
         RooAbsPdf* makeExponentialConvGaussian ( RooRealVar& ObsVar, int order ); //
         RooAbsPdf* makePowerConvGaussian ( RooRealVar& ObsVar, int order ); //
@@ -50,7 +57,7 @@ namespace RHD // Rare Higgs Decay
 
         /* Create falling spectrum PDFs. Make sure to delete. */
         RooAbsPdf* makeExponentialSeries ( RooRealVar& ObsVar, int order ); //
-        RooAbsPdf* makePowerSeries ( RooRealVar& ObsVar, int order ); //
+        RooAbsPdf* makePowerSeries ( RooRealVar& ObsVar, int order );
         RooAbsPdf* makeBernsteinPoly ( RooRealVar& ObsVar, int order);
         RooAbsPdf* makeBernsteinFast ( RooRealVar& ObsVar, int order); // see if any difference
         RooAbsPdf* makeLaurentSeries ( RooRealVar& ObsVar, int order );

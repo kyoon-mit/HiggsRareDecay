@@ -58,6 +58,69 @@ namespace RHD
     //         std::cout << key << '\n';
     //     }
     // }
+    void PDFModels::setVal( std::string const& paramKey,
+                                        double value )
+    {
+        if (!_Parameters.count(paramKey)) {
+            std::cout << "RHD::PDFModels::setVal --- ";
+            std::cout << "key \"" << paramKey << "\" not found." << std::endl;
+        } else {
+            _Parameters.at(paramKey).setVal(value);
+        }
+    }
+
+
+    void PDFModels::setMultiVals(         const char* prefix,
+                                                  int lowOrder,
+                                                  int highOrder,
+                                  std::vector<double> values )
+    /*
+     * Sets parameter values given by the keys, prefixN,
+     * where N is an integer ranging from lowOrder to highOrder.
+     */
+    {
+        if ((highOrder-lowOrder+1) != values.size())
+            std::invalid_argument("Number of elements in values not valid.");
+        for (int i=lowOrder; i<=highOrder; i++) {
+            auto key = Form("%s%d", prefix, i);
+            if (!_Parameters.count(key)) {
+                std::cout << "RHD::PDFModels::setMultiVals --- ";
+                std::cout << "key \"" << key << "\" not found." << std::endl;
+                continue;
+            }
+            _Parameters.at(key).setVal(values.at(i-lowOrder));
+        }
+    }
+    
+    
+    RooAbsPdf* PDFModels::makeBernsteinConvGaussian ( RooRealVar& ObsVar,
+                                                              int order )
+    {
+        // Make Gaussian if not exist
+        RooAbsPdf* gauss_pdf;
+        if (!_statusGaussian) {
+            gauss_pdf = makeGaussian(ObsVar);
+        } else {
+            gauss_pdf = _PDFs["Gaussian"].get();
+        }
+
+        // Make Bernstein Polynomial
+        RooAbsPdf* bern_pdf = makeBernsteinPoly(ObsVar, order);
+
+        // Make Convolution: Bernstein Polynomial (X) Gaussian
+        auto conv_name = Form("bern%d_X_gauss", order);
+        _PDFs.insert(std::pair<std::string, std::unique_ptr<RooAbsPdf>>
+                     (conv_name, std::make_unique<RooFFTConvPdf>
+                      (RooFFTConvPdf(conv_name, conv_name,
+                                     ObsVar, *bern_pdf, *gauss_pdf))
+                     )
+                    );
+        
+        std::cout << "Create Bernstein (X) Gaussian PDF with the following key: ";
+        std::cout << conv_name << std::endl;
+        
+        return _PDFs[conv_name].get();
+    }   
 
         
     RooAbsPdf* PDFModels::makeLaurentConvGaussian ( RooRealVar& ObsVar,
@@ -83,6 +146,9 @@ namespace RHD
                      )
                     );
 
+        std::cout << "Create Laurent (X) Gaussian PDF with the following key: ";
+        std::cout << conv_name << std::endl;
+
         return _PDFs[conv_name].get();
     }
 
@@ -92,11 +158,13 @@ namespace RHD
         double xlow = ObsVar.getMin();
         double xhigh = ObsVar.getMax();
         
-        storeRooRealVar("gauss_mu", (xhigh+xlow)/2., xlow, xhigh);
-        storeRooRealVar("gauss_sigma", (xhigh-xlow)/10., 1e-2, (xhigh-xlow)/2.);
+        storeRooRealVar("gauss_mu", 20., 0., xhigh);
+        storeRooRealVar("gauss_sigma", 10., 1e-2, (xhigh-xlow)/2.);
         storeRooGaussian("Gaussian", ObsVar,
                           _Parameters["gauss_mu"],
                           _Parameters["gauss_sigma"]);
+
+        _statusGaussian = true;
 
         return _PDFs["Gaussian"].get();
     }
@@ -246,8 +314,8 @@ namespace RHD
         auto args_coeff = RooArgList(clist_name);
         
         for (int i=0; i<=order; i++) {
-            auto coeff_name = Form("%s_c%d", prefix, order);
-            storeRooRealVar(coeff_name, 0., 1.);
+            auto coeff_name = Form("%s_c%d", prefix, i);
+            storeRooRealVar(coeff_name, 0.6/(i+1), 0., 1.);
             args_coeff.add(_Parameters[coeff_name]);
         }
 
@@ -354,8 +422,8 @@ namespace RHD
                      )
                     );
         _statusGaussian = PDFStatus::exists;
-        std::cout << "Created Gaussian PDF with the following key: ";
-        std::cout << key << std::endl;
+        // std::cout << "Created Gaussian PDF with the following key: ";
+        // std::cout << key << std::endl;
     }
 
     void PDFModels::storeRooPower ( const char* key,
@@ -367,8 +435,8 @@ namespace RHD
                       (RooPower(key, key, ObsVar, RooConst(power)))
                      )
                     );
-        std::cout << "Created Power PDF with the following key: ";
-        std::cout << key << std::endl;
+        // std::cout << "Created Power PDF with the following key: ";
+        // std::cout << key << std::endl;
     }
 
     void PDFModels::storeRooBernstein ( const char* key,
@@ -380,8 +448,8 @@ namespace RHD
                       (RooBernstein(key, key, ObsVar, coeffs))
                      )
                     );
-        std::cout << "Create Bernstein PDF with the following key: ";
-        std::cout << key << std::endl;
+        // std::cout << "Create Bernstein PDF with the following key: ";
+        //std::cout << key << std::endl;
     }
 
     void PDFModels::storeRooAddPdf ( const char* key,
@@ -394,8 +462,8 @@ namespace RHD
                       (RooAddPdf(key, key, pdfs, coeffs, recursive))
                      )
                     );
-        std::cout << "Created RooAddPdf with the following key: ";
-        std::cout << key << std::endl;
+        //std::cout << "Created RooAddPdf with the following key: ";
+        //std::cout << key << std::endl;
     }
 
     void PDFModels::storeRooGenericPdf ( const char* key,
