@@ -21,37 +21,40 @@ using namespace RooFit;
 
 void test()
 {
+    auto fitting = FitData();
+    fitting.setSaveOption(false);
+
     // Create signal histogram from file
-    auto f = FitData();
-    TH1F signal = f.fetchHistogram ({"/home/submit/kyoon/CMSSW_10_6_27/src/Hrare/analysis/outname_mc10_Wcat.root",
-                                     "/home/submit/kyoon/CMSSW_10_6_27/src/Hrare/analysis/outname_mc11_Wcat.root"},
-                                    "events", "HCandMass", "signal", "signal WH and ZH",
-                                    100, 100., 150.);
+    const std::vector<const char*> filenames_WH_ZH {"/home/submit/kyoon/CMSSW_10_6_27/src/Hrare/analysis/outname_mc10_Wcat.root",
+                                                    "/home/submit/kyoon/CMSSW_10_6_27/src/Hrare/analysis/outname_mc11_Wcat.root"};
+    TH1F signal = fitting.fetchHistogram (filenames_WH_ZH,
+                                          "events", "HCandMass", "signal", "signal WH and ZH",
+                                          100, 100., 150.);
 
     // Create background histograms from file
     double xlow = 40., xhigh = 200.;
     int nbins = (int) xhigh - xlow;
-    auto bkg_comb = TH1D("bkg_comb", "Z/W + H bkg combined", nbins, xlow, xhigh);
 
-    for (int i=0; i<5; i++) {
-        // Read file
-        char str[100];
-        snprintf(str, sizeof(str),
-                 "/home/submit/kyoon/CMSSW_10_6_27/src/Hrare/analysis/outname_mc%d_Wcat.root", i);
-        auto filename = std::string(str);
-        auto file = TFile(filename.c_str(), "READ");
-    
-        // Save HCandMass values into bkg_comb histogram
-        TTreeReader reader("events", &file);
-        TTreeReaderValue<Float_t> HCandMass(reader, "HCandMass");
-        while (reader.Next()) {
-            bkg_comb.Fill(*HCandMass);
-        }
-    }
+    const std::vector<const char*> filenames_ZW_H {"/home/submit/kyoon/CMSSW_10_6_27/src/Hrare/analysis/outname_mc0_Wcat.root",
+                                                   "/home/submit/kyoon/CMSSW_10_6_27/src/Hrare/analysis/outname_mc1_Wcat.root",
+                                                   "/home/submit/kyoon/CMSSW_10_6_27/src/Hrare/analysis/outname_mc2_Wcat.root",
+                                                   "/home/submit/kyoon/CMSSW_10_6_27/src/Hrare/analysis/outname_mc3_Wcat.root",
+                                                   "/home/submit/kyoon/CMSSW_10_6_27/src/Hrare/analysis/outname_mc4_Wcat.root"};
+
+    TH1F bkg_comb = fitting.fetchHistogram (filenames_ZW_H,
+                                            "events", "HCandMass", "bkg_comb", "Z/W + H bkg combined",
+                                            nbins, xlow, xhigh);
 
     // Key variable
     RooRealVar mH("mH", "mH", xlow, xhigh, "GeV");
 
+    // Fit to background
+    auto bkgdata = fitting.makeBinnedData("bkg_comb", mH, bkg_comb);
+    fitting.performMultiFit("bernXgauss", &mH, &bkgdata, {.61, .31, .24, .037, .047});
+    fitting.performMultiFit("lauXgauss", &mH, &bkgdata, {.06, .02}, {0.9, 0.75, 0.66});
+    fitting.performMultiFit("powXgauss", &mH, &bkgdata, {0.98, 0.7}, {-0.6, -4., -0.5});
+
+    /*
     // Make model(s)
     auto m = PDFModels();
     RooAbsPdf* gauss = m.makeGaussian(mH);
@@ -146,27 +149,6 @@ void test()
     f.plotPDF(&mH, bern8_X_gauss, &bkgdata);
     f.plotPDF(&mH, bern9_X_gauss, &bkgdata);
 
-    // auto ftest = f.performFTest(13,2,lau3_X_gauss,lau4_X_gauss,&mH,&bkgdata,"test");
-
-    /*
-    RooWorkspace w("w");
-
-    auto signaldata = f.makeBinnedData("signal", mH, signal);
-    RooFitResult sfit = f.performChi2Fit(trigauss, &signaldata, 5);
-
-    w.import(*trigauss);
-    w.import(signaldata);
-    w.saveSnapshot("sig_values", *trigauss->getParameters(signaldata), true);
-
-    auto bkgdata = f.makeBinnedData("bkg_comb", mH, bkg_comb);
-    RooFitResult fitresult = f.performChi2Fit(lau3_X_gauss, &bkgdata, 5);
-
-    w.import(*lau3_X_gauss);
-    w.import(bkgdata);
-    w.saveSnapshot("bkg_values", *lau3_X_gauss->getParameters(bkgdata), true);
-
-    w.Print();
-
-    w.writeToFile("test_workspace.root");
     */
+    // auto ftest = f.performFTest(13,2,lau3_X_gauss,lau4_X_gauss,&mH,&bkgdata,"test");
 }

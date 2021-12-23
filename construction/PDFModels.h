@@ -36,16 +36,16 @@ namespace RHD // Rare Higgs Decay
         void listPDFs ();
 
         /* Set parameter values. */
-        void setVal ( std::string const& paramKey, double value );
-        void setMultiVals (        const char* prefix,
-                                           int lowOrder,
-                                           int highOrder,
-                            std::vector<double> values );
+        void setVal ( const std::string& paramKey, double value );
+        void setMultiVals (          const char* prefix,
+                                             int lowOrder,
+                                             int highOrder,
+                            std::vector<double>& values );
 
         /* Make convolutions with Gaussian. */
         RooAbsPdf* makeExponentialConvGaussian ( RooRealVar& ObsVar, int order ); //
-        RooAbsPdf* makePowerConvGaussian ( RooRealVar& ObsVar, int order ); //
-        RooAbsPdf* makeBernsteinConvGaussian ( RooRealVar& ObsVar, int order ); //
+        RooAbsPdf* makePowerConvGaussian ( RooRealVar& ObsVar, int order );
+        RooAbsPdf* makeBernsteinConvGaussian ( RooRealVar& ObsVar, int order );
         RooAbsPdf* makeLaurentConvGaussian ( RooRealVar& ObsVar, int order );
         
         /* Create signal PDFs. */

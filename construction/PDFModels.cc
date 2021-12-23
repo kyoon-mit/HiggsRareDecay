@@ -58,7 +58,7 @@ namespace RHD
     //         std::cout << key << '\n';
     //     }
     // }
-    void PDFModels::setVal( std::string const& paramKey,
+    void PDFModels::setVal( const std::string& paramKey,
                                         double value )
     {
         if (!_Parameters.count(paramKey)) {
@@ -70,18 +70,18 @@ namespace RHD
     }
 
 
-    void PDFModels::setMultiVals(         const char* prefix,
-                                                  int lowOrder,
-                                                  int highOrder,
-                                  std::vector<double> values )
+    void PDFModels::setMultiVals(          const char* prefix,
+                                                   int lowOrder,
+                                                   int highOrder,
+                                  std::vector<double>& values )
     /*
      * Sets parameter values given by the keys, prefixN,
-     * where N is an integer ranging from lowOrder to highOrder.
+     * where N is an integer ranging from lowOrder to highOrder-1.
      */
     {
-        if ((highOrder-lowOrder+1) != values.size())
+        if ((highOrder-lowOrder) != values.size())
             std::invalid_argument("Number of elements in values not valid.");
-        for (int i=lowOrder; i<=highOrder; i++) {
+        for (int i=lowOrder; i<highOrder; i++) {
             auto key = Form("%s%d", prefix, i);
             if (!_Parameters.count(key)) {
                 std::cout << "RHD::PDFModels::setMultiVals --- ";
@@ -116,7 +116,7 @@ namespace RHD
                      )
                     );
         
-        std::cout << "Create Bernstein (X) Gaussian PDF with the following key: ";
+        std::cout << "Created Bernstein (X) Gaussian PDF with the following key: ";
         std::cout << conv_name << std::endl;
         
         return _PDFs[conv_name].get();
@@ -146,7 +146,37 @@ namespace RHD
                      )
                     );
 
-        std::cout << "Create Laurent (X) Gaussian PDF with the following key: ";
+        std::cout << "Created Laurent (X) Gaussian PDF with the following key: ";
+        std::cout << conv_name << std::endl;
+
+        return _PDFs[conv_name].get();
+    }
+
+
+    RooAbsPdf* PDFModels::makePowerConvGaussian ( RooRealVar& ObsVar,
+                                                          int order )
+    {
+        // Make Gaussian if not exist
+        RooAbsPdf* gauss_pdf;
+        if (!_statusGaussian) {
+            gauss_pdf = makeGaussian(ObsVar);
+        } else {
+            gauss_pdf = _PDFs["Gaussian"].get();
+        }
+
+        // Make Power Series
+        RooAbsPdf* pow_pdf = makePowerSeries(ObsVar, order);
+
+        // Make Convolution: Power Series (X) Gaussian
+        auto conv_name = Form("pow%d_X_gauss", order);
+        _PDFs.insert(std::pair<std::string, std::unique_ptr<RooAbsPdf>>
+                     (conv_name, std::make_unique<RooFFTConvPdf>
+                      (RooFFTConvPdf(conv_name, conv_name,
+                                     ObsVar, *pow_pdf, *gauss_pdf))
+                     )
+                    );
+
+        std::cout << "Created Power (X) Gaussian PDF with the following key: ";
         std::cout << conv_name << std::endl;
 
         return _PDFs[conv_name].get();

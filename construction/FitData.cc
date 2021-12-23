@@ -1,11 +1,14 @@
 #include "FitData.h"
+#include "PDFModels.h"
 
+#include <boost/filesystem.hpp>
 // --- STD ---
 #include <iostream>
 #include <stdexcept>
 
 // --- ROOT ---
 #include "TCanvas.h"
+#include "TFile.h"
 #include "TPad.h"
 #include "TH1F.h"
 #include "TMath.h"
@@ -16,6 +19,7 @@
 // --- RooFit ---
 #include "RooFit.h"
 #include "RooFitResult.h"
+#include "RooWorkspace.h"
 
 #include "RooRealVar.h"
 
@@ -30,17 +34,64 @@
 
 using namespace RHD; // TODO: delete after testing
 using namespace RooFit;
+namespace fs = boost::filesystem;
 
 namespace RHD
 {
-    TH1F FitData::fetchHistogram ( const std::list<const char*>& fileNames,
-                                                     const char* treeName,
-                                                     const char* branchName,
-                                                     const char* histName,
-                                                     const char* histTitle,
-                                                             int nbins,
-                                                          double xlow,
-                                                          double xhigh )
+    /* Constructor. */
+    FitData::FitData () :
+        _SAVEOPTION(false),
+        _SAVEDIR("./"),
+        _OUTFILENAME("FitData_results.root"),
+        _WORKSPACENAME("w")
+    {}
+
+    FitData::FitData ( const char* outfileName,
+                       const char* saveDir,
+                       const char* workspaceName ) :
+        _SAVEOPTION(true),
+        _SAVEDIR(saveDir),
+        _OUTFILENAME(outfileName),
+        _WORKSPACENAME(workspaceName)
+    {
+        fs::path full_path = fs::path(_SAVEDIR) / fs::path(_OUTFILENAME);
+        std::cout << "Recreating ROOT file \"" << full_path << std::endl;
+        
+        TFile* outfile = TFile::Open(full_path.c_str(), "RECREATE");
+        std::cout << "Creating workspace \"" << _WORKSPACENAME << "\"" << std::endl;
+        RooWorkspace w(_WORKSPACENAME);
+        w.Write();
+        outfile->Close();
+    }
+
+    /* Set save option. */
+    void FitData::setSaveOption ( bool saveOption )
+    {
+        if (!_SAVEOPTION && saveOption) { // i.e. if setting first time
+            _SAVEOPTION = true;
+            fs::path full_path = fs::path(_SAVEDIR) / fs::path(_OUTFILENAME);
+            std::cout << "Recreating ROOT file \"" << full_path << std::endl;
+        
+            TFile* outfile = TFile::Open(full_path.c_str(), "RECREATE");
+            std::cout << "Creating workspace \"" << _WORKSPACENAME << "\"" << std::endl;
+            RooWorkspace w(_WORKSPACENAME);
+            w.Write();
+            outfile->Close();
+        } else {
+            _SAVEOPTION = saveOption;
+        }
+    }
+
+    
+    /* Public methods. */
+    TH1F FitData::fetchHistogram ( const std::vector<const char*>& fileNames,
+                                                       const char* treeName,
+                                                       const char* branchName,
+                                                       const char* histName,
+                                                       const char* histTitle,
+                                                               int nbins,
+                                                            double xlow,
+                                                            double xhigh )
     {
         auto hist = TH1F(histName, histTitle, nbins, xlow, xhigh);
 
@@ -92,9 +143,9 @@ namespace RHD
             fitResult = pdf->chi2FitTo(*data,
                                        RooFit::Save(true),
                                        RooFit::Minimizer("Minuit2", "minimize"),
-                                       RooFit::PrintLevel(0),
+                                       RooFit::PrintLevel(-1),
                                        RooFit::Warnings(false),
-                                       RooFit::PrintEvalErrors(0)
+                                       RooFit::PrintEvalErrors(-1)
                                       );
             status = fitResult->status();
             // If fit status is not 0, randomize parameters
@@ -137,6 +188,107 @@ namespace RHD
         std::cout << "---------------------------------------------------------\n" << std::endl;
         return *fitResult;
     }
+
+
+    void FitData::performMultiFit (                const char* pdfType,
+                                                   RooRealVar* ObsVar,
+                                                  RooDataHist* data,
+                                    const std::vector<double>& initParamValues1,
+                                    const std::vector<double>& initParamValues2,
+                                                        double fTestAlpha )
+    /*
+     * Performs fit of the pdf type provided.
+     * Scans from lowest order of pdf type to higher, until value obtained from
+     * performing the F-test is greater than fTestAlpha.
+     * To faciliate fitting, provide initParamValues in order of parameters in
+     * the parameter list. If size of initParamValues is smaller/bigger than the
+     * number of free parameters, only the first few parameters will be set.
+     */
+    {
+        // Make containers for PDF pointers and chi2-distribution variables
+        std::vector<RooAbsPdf*> pdfs;
+        std::vector<double> nlls;
+        std::vector<double> dofs;
+        
+        auto models = PDFModels();
+        
+        double fProb = 0;
+        int order = 1;
+        int plist1_size = initParamValues1.size();
+        int plist2_size = initParamValues2.size();
+        int retry;
+
+        while (fProb < fTestAlpha) {
+            // Set initial parameter values for fit
+            std::vector<double> params1(initParamValues1.begin(),
+                                        initParamValues1.begin() + std::min(order, plist1_size));
+            std::vector<double> params2(initParamValues2.begin(),
+                                        initParamValues2.begin() + std::min(order, plist2_size));
+        
+            // Make PDF according to type given
+            if (std::strcmp(pdfType, "bernXgauss") == 0) {
+                pdfs.push_back(models.makeBernsteinConvGaussian(*ObsVar, order));
+                models.setMultiVals(Form("bern%d_c", order),
+                                    0, std::min(order, plist1_size),
+                                    params1);
+                retry = 1;
+
+            } else if (std::strcmp(pdfType, "lauXgauss") == 0) {
+                pdfs.push_back(models.makeLaurentConvGaussian(*ObsVar, order));
+                models.setMultiVals(Form("lau%d_h", order),
+                                    1, std::min(order+1, plist1_size+1),
+                                    params1);
+                models.setMultiVals(Form("lau%d_l", order),
+                                    1, std::min(order+1, plist2_size+1),
+                                    params2);
+                retry = 3;
+                
+            } else if (std::strcmp(pdfType, "powXgauss") == 0) {
+                pdfs.push_back(models.makePowerConvGaussian(*ObsVar, order));
+                models.setMultiVals(Form("powsrs%d_c", order),
+                                    1, std::min(order+1, plist1_size+1),
+                                    params1);
+                models.setMultiVals(Form("powsrs%d_p", order),
+                                    1, std::min(order+1, plist2_size+1),
+                                    params2);
+                retry = 5;
+            }
+
+            // Perform chi2 fit
+            RooFitResult fit = performChi2Fit(pdfs.at(order-1), data, 150, retry);
+            nlls.push_back(fit.minNll());
+            dofs.push_back(fit.covarianceMatrix().GetNcols());
+            
+            if (order >= 2) {
+                // Calculate F-test probability using chi2 distribution
+                fProb = getWilksProb(nlls.at(order-2), nlls.at(order-1),
+                                     dofs.at(order-2), dofs.at(order-1));
+                
+                std::cout << "###################################################" << std::endl;
+                std::cout << "   F-test probability for " << pdfType << "\n"
+                          << "   between orders " << order
+                          << " and " << (order-1) << " : " << std::endl;
+                std::cout << "             " << fProb << "\n" << std::endl;
+                std::cout << "###################################################\n" << std::endl;
+            }
+            
+            // Plot individual PDFs
+            plotPDF(ObsVar, pdfs.at(order-1), data);
+            order++;
+        } // End while-loop
+
+        // Save to workspace and file
+        if (_SAVEOPTION) {
+            TFile* saveFile = TFile::Open(_OUTFILENAME, "UPDATE");
+            auto wspace = (RooWorkspace*) saveFile->Get(_WORKSPACENAME);
+            for (const auto& pdf: pdfs) {
+                RooArgSet* params = (RooArgSet*) pdf->getParameters(*ObsVar);
+                wspace->import(*pdf);
+                wspace->saveSnapshot(pdf->GetName(), *params, true);
+            }
+            saveFile->Close();
+        }
+    } 
 
     
     /* Evaluate fit.*/
@@ -205,9 +357,9 @@ namespace RHD
     
 
     /* Plot fit. */
-    TCanvas FitData::plotPDF (  RooRealVar* ObsVar,
-                                 RooAbsPdf* pdf,
-                               RooDataHist* data )
+    void FitData::plotPDF (  RooRealVar* ObsVar,
+                              RooAbsPdf* pdf,
+                            RooDataHist* data )
     {
         // PDF and data plot
         RooPlot* frame1 = ObsVar->frame(RooFit::Title(pdf->GetTitle()));
@@ -216,9 +368,9 @@ namespace RHD
                     RooFit::LineColor(kRed),
                     RooFit::LineStyle(kDashed),
                     RooFit::Name("fit"));
-        pdf->paramOn(frame1, RooFit::Layout(0.6, 0.88, 0.85));
+        pdf->paramOn(frame1, RooFit::Layout(0.72, 0.88, 0.86));
         frame1->getAttText()->SetTextFont(43);
-        frame1->getAttText()->SetTextSize(21);
+        frame1->getAttText()->SetTextSize(15);
 
         // Residuals
         RooPlot* frame2 = ObsVar->frame(RooFit::Title("residuals"));
@@ -257,9 +409,6 @@ namespace RHD
         p3.Draw();
         c.Update();
 
-        // TEST
-        c.SaveAs(Form("%s.jpg", pdf->GetName()));
-
-        return c.Clone();
+        c.SaveAs(Form("%s/plots/%s.jpg", _SAVEDIR, pdf->GetName()));
     }
 }

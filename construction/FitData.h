@@ -7,6 +7,7 @@
 #define FIT_DATA_H
 
 #include <list>
+#include <vector>
 #include <map>
 #include <string>
 
@@ -25,24 +26,26 @@ namespace RHD // Rare Higgs Decay
     class FitData
     {
     public:
-        FitData () {};
+        FitData ();
+        FitData ( const char* outfileName,
+                  const char* saveDir="./",
+                  const char* workspaceName="w" );
         ~FitData () {};
 
         /* Fetch histogram from file. */
-        TH1F fetchHistogram ( const std::list<const char*>& fileNames,
-                                                const char* treeName,
-                                                const char* branchName,
-                                                const char* histName,
-                                                const char* histTitle,
-                                                        int nbins,
-                                                     double xlow,
-                                                     double xhigh );
+        TH1F fetchHistogram ( const std::vector<const char*>& fileNames,
+                                                  const char* treeName,
+                                                  const char* branchName,
+                                                  const char* histName,
+                                                  const char* histTitle,
+                                                          int nbins,
+                                                       double xlow,
+                                                       double xhigh );
 
         /* Make data histogram. */
         RooDataHist makeBinnedData ( const char* name,
                                      RooRealVar& ObsVar,
-                                            TH1& hist );
-        
+                                            TH1& hist );        
         void makeBlindedDataHistogram (); // TODO
 
         /* Perform fit. */
@@ -50,6 +53,12 @@ namespace RHD // Rare Higgs Decay
                                       RooDataHist* data,
                                                int maxTries,
                                                int retry=0 );
+        void performMultiFit (                const char* pdfType,
+                                              RooRealVar* ObsVar,
+                                             RooDataHist* data,
+                               const std::vector<double>& initParamValues1={},
+                               const std::vector<double>& initParamValues2={},
+                                                   double fTestAlpha=0.05 );
 
         /* Evaluate fit. */
         void getGoodnessOfFit (); //
@@ -71,21 +80,27 @@ namespace RHD // Rare Higgs Decay
                               std::string name );
 
         /* Plot fit. */
-        TCanvas plotPDF (  RooRealVar* ObsVar,
-                            RooAbsPdf* pdf,
-                          RooDataHist* data );
+        void plotPDF (  RooRealVar* ObsVar,
+                         RooAbsPdf* pdf,
+                       RooDataHist* data );
         
         inline void setSaveDir ( const char* dir ) { _SAVEDIR = dir; }
 
-        /* Save results. */
+        /* Save to file. */
+        inline void setOutfileName ( const char* fileName ) { _OUTFILENAME = fileName; }
+        inline void setWorkspaceName ( const char* wspaceName ) { _WORKSPACENAME = wspaceName; }
+        void setSaveOption ( bool saveOption );
         void saveFitResults (); //
 
     private:
         /* Map to store data histograms. */
         std::map<std::string, RooDataHist> _DataHistograms;
 
-        /* Directory to save outputs. */
+        /* Internal variables for saving. */
+               bool _SAVEOPTION;
         const char* _SAVEDIR;
+        const char* _OUTFILENAME;
+        const char* _WORKSPACENAME;
     };
 }
 
