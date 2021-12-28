@@ -53,12 +53,32 @@ namespace RHD // Rare Higgs Decay
                                       RooDataHist* data,
                                                int maxTries,
                                                int retry=0 );
-        void performMultiFit (                const char* pdfType,
-                                              RooRealVar* ObsVar,
-                                             RooDataHist* data,
-                               const std::vector<double>& initParamValues1={},
-                               const std::vector<double>& initParamValues2={},
-                                                   double fTestAlpha=0.05 );
+        RooFitResult performLikelihoodFit (   RooAbsPdf* pdf,
+                                            RooDataHist* data, // binned
+                                                     int maxTries,
+                                                     int retry=0 );
+        RooFitResult performLikelihoodFit (  RooAbsPdf* pdf,
+                                            RooDataSet* data, // unbinned
+                                                    int maxTries,
+                                                    int retry=0 );
+        void performMultiChi2Fit (                const char* pdfType,
+                                                  RooRealVar* ObsVar,
+                                                 RooDataHist* data,
+                                   const std::vector<double>& initParamValues1={},
+                                   const std::vector<double>& initParamValues2={},
+                                                       double fTestAlpha=0.05 );
+        void performMultiLikelihoodFit (                const char* pdfType,
+                                                        RooRealVar* ObsVar,
+                                                       RooDataHist* data, // binned
+                                         const std::vector<double>& initParamValues1={},
+                                         const std::vector<double>& initParamValues2={},
+                                                             double fTestAlpha=0.05 );
+        void performMultiLikelihoodFit (                const char* pdfType,
+                                                        RooRealVar* ObsVar,
+                                                        RooDataSet* data, // unbinned
+                                         const std::vector<double>& initParamValues1={},
+                                         const std::vector<double>& initParamValues2={},
+                                                             double fTestAlpha=0.05 ); //
 
         /* Evaluate fit. */
         void getGoodnessOfFit (); //

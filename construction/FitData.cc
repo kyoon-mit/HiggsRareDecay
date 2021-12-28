@@ -19,6 +19,7 @@
 // --- RooFit ---
 #include "RooFit.h"
 #include "RooFitResult.h"
+#include "RooMsgService.h"
 #include "RooWorkspace.h"
 
 #include "RooRealVar.h"
@@ -134,10 +135,11 @@ namespace RHD
         int retrycount = retry;
         
         std::cout << "----------- ";
-        std::cout << "Fitting " << pdf->GetTitle() << " to " << data->GetTitle();
+        std::cout << "Chi2 fitting " << pdf->GetTitle() << " to " << data->GetTitle();
         std::cout << " -----------" << std::endl;
         
         // Try fit as many times as needed to converge
+        RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
         while (++ntries <= maxTries) {
             std::cout << "trial #" << ntries << std::endl;
             fitResult = pdf->chi2FitTo(*data,
@@ -145,7 +147,7 @@ namespace RHD
                                        RooFit::Minimizer("Minuit2", "minimize"),
                                        RooFit::PrintLevel(-1),
                                        RooFit::Warnings(false),
-                                       RooFit::PrintEvalErrors(-1)
+                                       RooFit::PrintEvalErrors(-99)
                                       );
             status = fitResult->status();
             // If fit status is not 0, randomize parameters
@@ -153,8 +155,10 @@ namespace RHD
                 params->assignValueOnly(fitResult->randomizePars());
             } else {
                 // Retry if argument given is > 0
-                if (retrycount <= 0) break;
-                else {
+                if (retrycount <= 0) {
+                    fitResult->floatParsFinal().Print("s");
+                    break;
+                } else {
                     params->assignValueOnly(fitResult->randomizePars());
                     retrycount--;
                 }
@@ -190,14 +194,156 @@ namespace RHD
     }
 
 
-    void FitData::performMultiFit (                const char* pdfType,
-                                                   RooRealVar* ObsVar,
-                                                  RooDataHist* data,
-                                    const std::vector<double>& initParamValues1,
-                                    const std::vector<double>& initParamValues2,
-                                                        double fTestAlpha )
+    RooFitResult FitData::performLikelihoodFit (   RooAbsPdf* pdf,
+                                                 RooDataHist* data,
+                                                          int maxTries,
+                                                          int retry=0 )
+    {
+        RooArgSet* params = pdf->getParameters((const RooArgSet*)(0));
+        RooFitResult* fitResult;
+        int status = 5;
+        int ntries = 0;
+        int retrycount = retry;
+        
+        std::cout << "----------- ";
+        std::cout << "Likelihood (binned) fitting " << pdf->GetTitle() << " to " << data->GetTitle();
+        std::cout << " -----------" << std::endl;
+        
+        // Try fit as many times as needed to converge
+        RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
+        while (++ntries <= maxTries) {
+            std::cout << "trial #" << ntries << std::endl;
+            fitResult = pdf->fitTo(*data,
+                                   RooFit::Save(true),
+                                   RooFit::Minimizer("Minuit2", "minimize"),
+                                   RooFit::PrintLevel(-1),
+                                   RooFit::Warnings(false),
+                                   RooFit::PrintEvalErrors(-99)
+                                  );
+            status = fitResult->status();
+            // If fit status is not 0, randomize parameters
+            if (status) {
+                params->assignValueOnly(fitResult->randomizePars());
+            } else {
+                // Retry if argument given is > 0
+                if (retrycount <= 0) {
+                    fitResult->floatParsFinal().Print("s");
+                    break;
+                } else {
+                    params->assignValueOnly(fitResult->randomizePars());
+                    retrycount--;
+                }
+            }
+        }
+
+        // Check final fit status
+        std::string message;
+        if (status == 0) {
+            message = "Likelihood fit has converged.";
+        } else if (status == 1) {
+            message = "Likelihood fit exited with status = 1: "
+                      "Covariance was made pos defined.";
+        } else if (status == 2) {
+            message = "Likelihood fit exited with status = 2: "
+                      "Hesse is invalid.";
+        } else if (status == 3) {
+            message = "Likelihood fit exited with status = 3: "
+                      "Edm is above max.";
+        } else if (status == 4) {
+            message = "Likelihood fit exited with status = 4: "
+                      "Reached call limit.";
+        } else if (status == 5) {
+            message = "Likelihood fit exited with status = 5: "
+                      "Please investigate.";
+        } else {
+            message = "Something is amiss!";
+        }
+
+        std::cout << message << std::endl;
+        std::cout << "---------------------------------------------------------\n" << std::endl;
+        return *fitResult;
+    }
+
+
+    RooFitResult FitData::performLikelihoodFit (  RooAbsPdf* pdf,
+                                                 RooDataSet* data,
+                                                         int maxTries,
+                                                         int retry=0 )
+    {
+        RooArgSet* params = pdf->getParameters((const RooArgSet*)(0));
+        RooFitResult* fitResult;
+        int status = 5;
+        int ntries = 0;
+        int retrycount = retry;
+        
+        std::cout << "----------- ";
+        std::cout << "Likelihood (unbinned) fitting " << pdf->GetTitle() << " to " << data->GetTitle();
+        std::cout << " -----------" << std::endl;
+        
+        // Try fit as many times as needed to converge
+        RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
+        while (++ntries <= maxTries) {
+            std::cout << "trial #" << ntries << std::endl;
+            fitResult = pdf->fitTo(*data,
+                                   RooFit::Save(true),
+                                   RooFit::Minimizer("Minuit2", "minimize"),
+                                   RooFit::PrintLevel(-1),
+                                   RooFit::Warnings(false),
+                                   RooFit::PrintEvalErrors(-99)
+                                  );
+            status = fitResult->status();
+            // If fit status is not 0, randomize parameters
+            if (status) {
+                params->assignValueOnly(fitResult->randomizePars());
+            } else {
+                // Retry if argument given is > 0
+                if (retrycount <= 0) {
+                    fitResult->floatParsFinal().Print("s");
+                    break;
+                } else {
+                    params->assignValueOnly(fitResult->randomizePars());
+                    retrycount--;
+                }
+            }
+        }
+
+        // Check final fit status
+        std::string message;
+        if (status == 0) {
+            message = "Likelihood fit has converged.";
+        } else if (status == 1) {
+            message = "Likelihood fit exited with status = 1: "
+                      "Covariance was made pos defined.";
+        } else if (status == 2) {
+            message = "Likelihood fit exited with status = 2: "
+                      "Hesse is invalid.";
+        } else if (status == 3) {
+            message = "Likelihood fit exited with status = 3: "
+                      "Edm is above max.";
+        } else if (status == 4) {
+            message = "Likelihood fit exited with status = 4: "
+                      "Reached call limit.";
+        } else if (status == 5) {
+            message = "Likelihood fit exited with status = 5: "
+                      "Please investigate.";
+        } else {
+            message = "Something is amiss!";
+        }
+
+        std::cout << message << std::endl;
+        std::cout << "---------------------------------------------------------\n" << std::endl;
+        return *fitResult;
+    }
+    
+
+    void FitData::performMultiChi2Fit (                const char* pdfType,
+                                                       RooRealVar* ObsVar,
+                                                      RooDataHist* data,
+                                        const std::vector<double>& initParamValues1,
+                                        const std::vector<double>& initParamValues2,
+                                                            double fTestAlpha )
     /*
-     * Performs fit of the pdf type provided.
+     * Performs chi2 fit of the pdf type provided.
      * Scans from lowest order of pdf type to higher, until value obtained from
      * performing the F-test is greater than fTestAlpha.
      * To faciliate fitting, provide initParamValues in order of parameters in
@@ -228,33 +374,39 @@ namespace RHD
             // Make PDF according to type given
             if (std::strcmp(pdfType, "bernXgauss") == 0) {
                 pdfs.push_back(models.makeBernsteinConvGaussian(*ObsVar, order));
+                retry = 1;
                 models.setMultiVals(Form("bern%d_c", order),
                                     0, std::min(order, plist1_size),
                                     params1);
-                retry = 1;
 
             } else if (std::strcmp(pdfType, "lauXgauss") == 0) {
                 pdfs.push_back(models.makeLaurentConvGaussian(*ObsVar, order));
+                retry = 2;
                 models.setMultiVals(Form("lau%d_h", order),
                                     1, std::min(order+1, plist1_size+1),
                                     params1);
                 models.setMultiVals(Form("lau%d_l", order),
                                     1, std::min(order+1, plist2_size+1),
                                     params2);
-                retry = 3;
                 
             } else if (std::strcmp(pdfType, "powXgauss") == 0) {
                 pdfs.push_back(models.makePowerConvGaussian(*ObsVar, order));
-                models.setMultiVals(Form("powsrs%d_c", order),
-                                    1, std::min(order+1, plist1_size+1),
-                                    params1);
-                models.setMultiVals(Form("powsrs%d_p", order),
-                                    1, std::min(order+1, plist2_size+1),
-                                    params2);
-                retry = 5;
+                retry = 2;
+                if (order > 1) {
+                    models.setMultiVals(Form("powsrs%d_c", order),
+                                        1, std::min(order+1, plist1_size+1),
+                                        params1);
+                    models.setMultiVals(Form("powsrs%d_p", order),
+                                        1, std::min(order+1, plist2_size+1),
+                                        params2);
+                }
             }
 
             // Perform chi2 fit
+            if (std::strcmp(pdfType, "powXgauss") == 0) {
+                //                models.setVal("gauss_mu", 19.6);
+                //                models.setVal("gauss_sigma", 10.);
+            }
             RooFitResult fit = performChi2Fit(pdfs.at(order-1), data, 150, retry);
             nlls.push_back(fit.minNll());
             dofs.push_back(fit.covarianceMatrix().GetNcols());
@@ -284,7 +436,114 @@ namespace RHD
             for (const auto& pdf: pdfs) {
                 RooArgSet* params = (RooArgSet*) pdf->getParameters(*ObsVar);
                 wspace->import(*pdf);
-                wspace->saveSnapshot(pdf->GetName(), *params, true);
+                wspace->saveSnapshot(Form("%s_chi2", pdf->GetName()), *params, true);
+            }
+            saveFile->Close();
+        }
+    }
+
+
+    void FitData::performMultiLikelihoodFit (                const char* pdfType,
+                                                             RooRealVar* ObsVar,
+                                                            RooDataHist* data,
+                                              const std::vector<double>& initParamValues1,
+                                              const std::vector<double>& initParamValues2,
+                                                                  double fTestAlpha )
+    /*
+     * Performs likelihood fit of the pdf type provided.
+     * Scans from lowest order of pdf type to higher, until value obtained from
+     * performing the F-test is greater than fTestAlpha.
+     * To faciliate fitting, provide initParamValues in order of parameters in
+     * the parameter list. If size of initParamValues is smaller/bigger than the
+     * number of free parameters, only the first few parameters will be set.
+     */
+    {
+        // Make containers for PDF pointers and chi2-distribution variables
+        std::vector<RooAbsPdf*> pdfs;
+        std::vector<double> nlls;
+        std::vector<double> dofs;
+        
+        auto models = PDFModels();
+        
+        double fProb = 0;
+        int order = 1;
+        int plist1_size = initParamValues1.size();
+        int plist2_size = initParamValues2.size();
+        int retry;
+
+        while (fProb < fTestAlpha) {
+            // Set initial parameter values for fit
+            std::vector<double> params1(initParamValues1.begin(),
+                                        initParamValues1.begin() + std::min(order, plist1_size));
+            std::vector<double> params2(initParamValues2.begin(),
+                                        initParamValues2.begin() + std::min(order, plist2_size));
+        
+            // Make PDF according to type given
+            if (std::strcmp(pdfType, "bernXgauss") == 0) {
+                pdfs.push_back(models.makeBernsteinConvGaussian(*ObsVar, order));
+                retry = 1;
+                models.setMultiVals(Form("bern%d_c", order),
+                                    0, std::min(order, plist1_size),
+                                    params1);
+
+            } else if (std::strcmp(pdfType, "lauXgauss") == 0) {
+                pdfs.push_back(models.makeLaurentConvGaussian(*ObsVar, order));
+                retry = 2;
+                models.setMultiVals(Form("lau%d_h", order),
+                                    1, std::min(order+1, plist1_size+1),
+                                    params1);
+                models.setMultiVals(Form("lau%d_l", order),
+                                    1, std::min(order+1, plist2_size+1),
+                                    params2);
+                
+            } else if (std::strcmp(pdfType, "powXgauss") == 0) {
+                pdfs.push_back(models.makePowerConvGaussian(*ObsVar, order));
+                retry = 2;
+                if (order > 1) {
+                    models.setMultiVals(Form("powsrs%d_c", order),
+                                        1, std::min(order+1, plist1_size+1),
+                                        params1);
+                    models.setMultiVals(Form("powsrs%d_p", order),
+                                        1, std::min(order+1, plist2_size+1),
+                                        params2);
+                }
+            }
+
+            // Perform chi2 fit
+            if (std::strcmp(pdfType, "powXgauss") == 0) {
+                //                models.setVal("gauss_mu", 19.6);
+                //                models.setVal("gauss_sigma", 10.);
+            }
+            RooFitResult fit = performLikelihoodFit(pdfs.at(order-1), data, 150, retry);
+            nlls.push_back(fit.minNll());
+            dofs.push_back(fit.covarianceMatrix().GetNcols());
+            
+            if (order >= 2) {
+                // Calculate F-test probability using chi2 distribution
+                fProb = getWilksProb(nlls.at(order-2), nlls.at(order-1),
+                                     dofs.at(order-2), dofs.at(order-1));
+                
+                std::cout << "###################################################" << std::endl;
+                std::cout << "   F-test probability for " << pdfType << "\n"
+                          << "   between orders " << order
+                          << " and " << (order-1) << " : " << std::endl;
+                std::cout << "             " << fProb << "\n" << std::endl;
+                std::cout << "###################################################\n" << std::endl;
+            }
+            
+            // Plot individual PDFs
+            plotPDF(ObsVar, pdfs.at(order-1), data);
+            order++;
+        } // End while-loop
+
+        // Save to workspace and file
+        if (_SAVEOPTION) {
+            TFile* saveFile = TFile::Open(_OUTFILENAME, "UPDATE");
+            auto wspace = (RooWorkspace*) saveFile->Get(_WORKSPACENAME);
+            for (const auto& pdf: pdfs) {
+                RooArgSet* params = (RooArgSet*) pdf->getParameters(*ObsVar);
+                wspace->import(*pdf);
+                wspace->saveSnapshot(Form("%s_bin_mle", pdf->GetName()), *params, true);
             }
             saveFile->Close();
         }
@@ -409,6 +668,8 @@ namespace RHD
         p3.Draw();
         c.Update();
 
-        c.SaveAs(Form("%s/plots/%s.jpg", _SAVEDIR, pdf->GetName()));
+        fs::path save_path = fs::path(_SAVEDIR) / fs::path("plots") /
+                             fs::path(Form("%s.jpg", pdf->GetName()));
+        c.SaveAs(save_path.c_str());
     }
 }

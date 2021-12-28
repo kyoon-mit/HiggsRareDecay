@@ -297,12 +297,13 @@ namespace RHD
             formula = "TMath::Power(@0, @1)";
         } else { // if two or more terms
             for (int i=1; i<order; i++) {
+            // for (int i=1; i<=order; i++) {
                 coeff_name = Form("%s_c%d", prefix, i);
                 pow_name = Form("%s_p%d", prefix, i);
 
                 storeRooRealVar(coeff_name, 0.1, 0., 1.);
-                storeRooRealVar(pow_name, std::max(-10., -std::pow((i+1), 2.)),
-                                -std::pow((i+1), 2.), 0.);
+                storeRooRealVar(pow_name, std::max(-10., -std::pow(2., i+1.)),
+                                -10., 0.);
                 args_param.add(_Parameters[coeff_name]);
                 args_param.add(_Parameters[pow_name]);
                 
@@ -310,16 +311,16 @@ namespace RHD
                 clast_form += Form("-%s", ci_form);
                 pi_form = Form("TMath::Power(@0, @%d)", 2*i);
                 formula += Form("%s*%s", ci_form, pi_form);
-                formula += "+";
+                if (i<order) formula += "+";
             }
 
             // final term
             pow_name = Form("%s_p%d", prefix, order);
-            storeRooRealVar(pow_name, -std::pow((order+1), 2.),
-                            std::max(-10., -std::pow((order+1), 2.)), 0.);
+            storeRooRealVar(pow_name, std::max(-10., -std::pow(2., order+1.)),
+                            -10., 0.);
             args_param.add(_Parameters[pow_name]);
-            formula += Form("(1%s)*TMath::Power(@0, @%d)",
-                            clast_form.c_str(), 2*order-1);
+            formula += Form("(%d%s)*TMath::Power(@0, @%d)",
+                            1, clast_form.c_str(), 2*order-1);
         }
 
         std::cout << formula << std::endl;
