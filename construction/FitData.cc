@@ -107,9 +107,9 @@ namespace RHD
 
             // Open OUTFILE
             TFile* outfile = TFile::Open(_SAVEPATHFULL, "UPDATE");
-            auto w = (RooWorkspace*) outfile->Get(_WORKSPACENAME);
+            auto wspace = (RooWorkspace*) outfile->Get(_WORKSPACENAME);
             for (auto const& pdf_name: pdfNameList) {
-                RooAbsPdf* pdf = w->pdf(pdf_name);
+                RooAbsPdf* pdf = wspace->pdf(pdf_name);
                 if (pdf) {
                     pdf_list.add(*pdf);
                 } else {
@@ -118,6 +118,9 @@ namespace RHD
                               << " and workspace " << _WORKSPACENAME << std::endl;
                 }
             }
+            RooMultiPdf(multipdfName, multipdfName, pdf_index, pdf_list);
+            wspace->writeToFile(_SAVEPATHFULL);
+            outfile->Close();
         }
     }
 
@@ -477,6 +480,7 @@ namespace RHD
                 wspace->import(*pdf);
                 wspace->saveSnapshot(Form("%s_chi2", pdf->GetName()), *params, true);
             }
+            wspace->writeToFile(_SAVEPATHFULL);
             saveFile->Close();
         }
     }
@@ -538,21 +542,15 @@ namespace RHD
             } else if (std::strcmp(pdfType, "powXgauss") == 0) {
                 pdfs.push_back(models.makePowerConvGaussian(*ObsVar, order));
                 retry = 2;
-                if (order > 1) {
-                    models.setMultiVals(Form("powsrs%d_c", order),
-                                        1, std::min(order+1, plist1_size+1),
-                                        params1);
-                    models.setMultiVals(Form("powsrs%d_p", order),
-                                        1, std::min(order+1, plist2_size+1),
-                                        params2);
-                }
+                models.setMultiVals(Form("powsrs%d_c", order),
+                                    1, std::min(order+1, plist1_size+1),
+                                    params1);
+                models.setMultiVals(Form("powsrs%d_p", order),
+                                    1, std::min(order+1, plist2_size+1),
+                                    params2);
             }
 
-            // Perform chi2 fit
-            if (std::strcmp(pdfType, "powXgauss") == 0) {
-                //                models.setVal("gauss_mu", 19.6);
-                //                models.setVal("gauss_sigma", 10.);
-            }
+            // Perform fit
             RooFitResult fit = performLikelihoodFit(pdfs.at(order-1), data, 150, retry);
             nlls.push_back(fit.minNll());
             dofs.push_back(fit.covarianceMatrix().GetNcols());
@@ -572,6 +570,7 @@ namespace RHD
             
             // Plot individual PDFs
             plotPDF(ObsVar, pdfs.at(order-1), data);
+            if ((std::strcmp("powXgauss", pdfType) == 0) && order > 4) break;
             order++;
         } // End while-loop
 
@@ -584,6 +583,7 @@ namespace RHD
                 wspace->import(*pdf);
                 wspace->saveSnapshot(Form("%s_bin_mle", pdf->GetName()), *params, true);
             }
+            wspace->writeToFile(_SAVEPATHFULL);
             saveFile->Close();
         }
     } 
@@ -716,9 +716,11 @@ namespace RHD
     /* Private methods. */
     void FitData::makePath()
     {
-        fs::path full_path = fs::weakly_canonical(fs::path(_SAVEDIR) /
-                                                  fs::path(_OUTFILENAME));
-        _SAVEPATHFULL = full_path.c_str();
-        // TODO: if not exist create
+        if (!_SAVEPATHFULL) {
+            fs::path full_path = fs::weakly_canonical(fs::path(_SAVEDIR) /
+                                                      fs::path(_OUTFILENAME));
+            _SAVEPATHFULL = full_path.c_str();
+            // TODO: if not exist create
+        }
     }
 }
