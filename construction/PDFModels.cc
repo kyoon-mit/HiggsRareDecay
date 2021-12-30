@@ -98,11 +98,8 @@ namespace RHD
     {
         // Make Gaussian if not exist
         RooAbsPdf* gauss_pdf;
-        if (!_statusGaussian) {
-            gauss_pdf = makeGaussian(ObsVar);
-        } else {
-            gauss_pdf = _PDFs["Gaussian"].get();
-        }
+        gauss_pdf = makeGaussian(ObsVar, Form("bern%d", order));
+        gauss_pdf = _PDFs[Form("bern%d_gaussian", order)].get();
 
         // Make Bernstein Polynomial
         RooAbsPdf* bern_pdf = makeBernsteinPoly(ObsVar, order);
@@ -128,11 +125,8 @@ namespace RHD
     {
         // Make Gaussian if not exist
         RooAbsPdf* gauss_pdf;
-        if (!_statusGaussian) {
-            gauss_pdf = makeGaussian(ObsVar);
-        } else {
-            gauss_pdf = _PDFs["Gaussian"].get();
-        }
+        gauss_pdf = makeGaussian(ObsVar, Form("lau%d", order));
+        gauss_pdf = _PDFs[Form("lau%d_gaussian", order)].get();
 
         // Make Laurent Series
         RooAbsPdf* lau_pdf = makeLaurentSeries(ObsVar, order);
@@ -158,11 +152,8 @@ namespace RHD
     {
         // Make Gaussian if not exist
         RooAbsPdf* gauss_pdf;
-        if (!_statusGaussian) {
-            gauss_pdf = makeGaussian(ObsVar);
-        } else {
-            gauss_pdf = _PDFs["Gaussian"].get();
-        }
+        gauss_pdf = makeGaussian(ObsVar, Form("powsrs%d", order));
+        gauss_pdf = _PDFs[Form("powsrs%d_gaussian", order)].get();
 
         // Make Power Series
         RooAbsPdf* pow_pdf = makePowerSeries(ObsVar, order);
@@ -183,20 +174,19 @@ namespace RHD
     }
 
     
-    RooAbsPdf* PDFModels::makeGaussian ( RooRealVar& ObsVar )
+    RooAbsPdf* PDFModels::makeGaussian ( RooRealVar& ObsVar,
+                                         const char* prefix )
     {
         double xlow = ObsVar.getMin();
         double xhigh = ObsVar.getMax();
         
-        storeRooRealVar("gauss_mu", 20., 0., xhigh);
-        storeRooRealVar("gauss_sigma", 10., 1e-2, (xhigh-xlow)/2.);
-        storeRooGaussian("Gaussian", ObsVar,
-                          _Parameters["gauss_mu"],
-                          _Parameters["gauss_sigma"]);
+        storeRooRealVar(Form("%s_mu", prefix), 20., 0., xhigh);
+        storeRooRealVar(Form("%s_sigma", prefix), 10., 1e-2, (xhigh-xlow)/2.);
+        storeRooGaussian(Form("%s_gaussian", prefix), ObsVar,
+                         _Parameters[Form("%s_gauss_mu", prefix)],
+                         _Parameters[Form("%s_gauss_sigma", prefix)]);
 
-        _statusGaussian = true;
-
-        return _PDFs["Gaussian"].get();
+        return _PDFs[Form("%s_gaussian", prefix)].get();
     }
 
 
@@ -452,7 +442,6 @@ namespace RHD
                       (RooGaussian(key, key, ObsVar, mu, sigma))
                      )
                     );
-        _statusGaussian = PDFStatus::exists;
         // std::cout << "Created Gaussian PDF with the following key: ";
         // std::cout << key << std::endl;
     }

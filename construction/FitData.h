@@ -110,15 +110,21 @@ namespace RHD // Rare Higgs Decay
         inline void setOutfileName ( const char* fileName ) { _OUTFILENAME = fileName; }
         inline void setWorkspaceName ( const char* wspaceName ) { _WORKSPACENAME = wspaceName; }
         void setSaveOption ( bool saveOption );
+        void saveMultiPdf ( const std::vector<const char*>& pdfNameList,
+                                                const char* multipdfName );
         void saveFitResults (); //
 
     private:
+        /* Method to set save path. */
+        void makePath();
+        
         /* Map to store data histograms. */
         std::map<std::string, RooDataHist> _DataHistograms;
 
         /* Internal variables for saving. */
                bool _SAVEOPTION;
         const char* _SAVEDIR;
+        const char* _SAVEPATHFULL;
         const char* _OUTFILENAME;
         const char* _WORKSPACENAME;
     };

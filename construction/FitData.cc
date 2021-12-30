@@ -26,6 +26,7 @@
 
 #include "RooArgList.h"
 #include "RooArgSet.h"
+#include "RooCategory.h"
 
 #include "RooAbsPdf.h"
 #include "RooDataHist.h"
@@ -45,7 +46,9 @@ namespace RHD
         _SAVEDIR("./"),
         _OUTFILENAME("FitData_results.root"),
         _WORKSPACENAME("w")
-    {}
+    {
+        makePath();
+    }
 
     FitData::FitData ( const char* outfileName,
                        const char* saveDir,
@@ -55,25 +58,26 @@ namespace RHD
         _OUTFILENAME(outfileName),
         _WORKSPACENAME(workspaceName)
     {
-        fs::path full_path = fs::path(_SAVEDIR) / fs::path(_OUTFILENAME);
-        std::cout << "Recreating ROOT file \"" << full_path << std::endl;
+        makePath();
+        std::cout << "Recreating ROOT file " << _SAVEPATHFULL << std::endl;
         
-        TFile* outfile = TFile::Open(full_path.c_str(), "RECREATE");
+        TFile* outfile = TFile::Open(_SAVEPATHFULL, "RECREATE");
         std::cout << "Creating workspace \"" << _WORKSPACENAME << "\"" << std::endl;
         RooWorkspace w(_WORKSPACENAME);
         w.Write();
         outfile->Close();
     }
 
-    /* Set save option. */
+
+    /* Public methods. */
     void FitData::setSaveOption ( bool saveOption )
     {
         if (!_SAVEOPTION && saveOption) { // i.e. if setting first time
             _SAVEOPTION = true;
-            fs::path full_path = fs::path(_SAVEDIR) / fs::path(_OUTFILENAME);
-            std::cout << "Recreating ROOT file \"" << full_path << std::endl;
+            makePath();
+            std::cout << "Recreating ROOT file \"" << _SAVEPATHFULL << std::endl;
         
-            TFile* outfile = TFile::Open(full_path.c_str(), "RECREATE");
+            TFile* outfile = TFile::Open(_SAVEPATHFULL, "RECREATE");
             std::cout << "Creating workspace \"" << _WORKSPACENAME << "\"" << std::endl;
             RooWorkspace w(_WORKSPACENAME);
             w.Write();
@@ -83,8 +87,41 @@ namespace RHD
         }
     }
 
+
+    void FitData::saveMultiPdf ( const std::vector<const char*>& pdfNameList,
+                                                     const char* multipdfName )
+    /*
+     * Fetches PDFs in the OUTFILE specified by pdfNameList, adds them in
+     * a RooMultiPdf instance, and saves the RooMultiPdf to the WORKSPACE
+     * in the OUTFILE.
+     */
+    {
+        if (!_SAVEOPTION) {
+            std::cout << "SAVEOPTION is set to false. "
+                      << "Not creating RooMultiPdf." << std::endl;
+            return;
+        } else {
+            // Book containers
+            RooCategory pdf_index("pdf_index", "pdf_index");
+            RooArgList pdf_list;
+
+            // Open OUTFILE
+            TFile* outfile = TFile::Open(_SAVEPATHFULL, "UPDATE");
+            auto w = (RooWorkspace*) outfile->Get(_WORKSPACENAME);
+            for (auto const& pdf_name: pdfNameList) {
+                RooAbsPdf* pdf = w->pdf(pdf_name);
+                if (pdf) {
+                    pdf_list.add(*pdf);
+                } else {
+                    std::cout << "PDF named " << pdf_name
+                              << " not found in file " << _SAVEPATHFULL
+                              << " and workspace " << _WORKSPACENAME << std::endl;
+                }
+            }
+        }
+    }
+
     
-    /* Public methods. */
     TH1F FitData::fetchHistogram ( const std::vector<const char*>& fileNames,
                                                        const char* treeName,
                                                        const char* branchName,
@@ -93,12 +130,14 @@ namespace RHD
                                                                int nbins,
                                                             double xlow,
                                                             double xhigh )
+    /*
+     * Fetch histograms from data files.
+     */
     {
         auto hist = TH1F(histName, histTitle, nbins, xlow, xhigh);
 
         for (const auto& fname: fileNames) {
             auto file = TFile(fname, "READ");
-
             TTreeReader reader(treeName, &file);
             TTreeReaderValue<float> var(reader, branchName);
             while (reader.Next()) {
@@ -431,7 +470,7 @@ namespace RHD
 
         // Save to workspace and file
         if (_SAVEOPTION) {
-            TFile* saveFile = TFile::Open(_OUTFILENAME, "UPDATE");
+            TFile* saveFile = TFile::Open(_SAVEPATHFULL, "UPDATE");
             auto wspace = (RooWorkspace*) saveFile->Get(_WORKSPACENAME);
             for (const auto& pdf: pdfs) {
                 RooArgSet* params = (RooArgSet*) pdf->getParameters(*ObsVar);
@@ -538,7 +577,7 @@ namespace RHD
 
         // Save to workspace and file
         if (_SAVEOPTION) {
-            TFile* saveFile = TFile::Open(_OUTFILENAME, "UPDATE");
+            TFile* saveFile = TFile::Open(_SAVEPATHFULL, "UPDATE");
             auto wspace = (RooWorkspace*) saveFile->Get(_WORKSPACENAME);
             for (const auto& pdf: pdfs) {
                 RooArgSet* params = (RooArgSet*) pdf->getParameters(*ObsVar);
@@ -671,5 +710,15 @@ namespace RHD
         fs::path save_path = fs::path(_SAVEDIR) / fs::path("plots") /
                              fs::path(Form("%s.jpg", pdf->GetName()));
         c.SaveAs(save_path.c_str());
+    }
+
+
+    /* Private methods. */
+    void FitData::makePath()
+    {
+        fs::path full_path = fs::weakly_canonical(fs::path(_SAVEDIR) /
+                                                  fs::path(_OUTFILENAME));
+        _SAVEPATHFULL = full_path.c_str();
+        // TODO: if not exist create
     }
 }

@@ -49,7 +49,7 @@ namespace RHD // Rare Higgs Decay
         RooAbsPdf* makeLaurentConvGaussian ( RooRealVar& ObsVar, int order );
         
         /* Create signal PDFs. */
-        RooAbsPdf* makeGaussian ( RooRealVar& ObsVar );
+        RooAbsPdf* makeGaussian ( RooRealVar& ObsVar, const char* prefix );
         RooAbsPdf* makeBreitWigner ( RooRealVar& ObsVar ); //
         RooAbsPdf* makeVoigtian ( RooRealVar& ObsVar ); //
         RooAbsPdf* makeDoubleGaussian ( RooRealVar& ObsVar ); //test
@@ -76,10 +76,6 @@ namespace RHD // Rare Higgs Decay
         std::map<std::string, std::unique_ptr<RooAbsPdf>> _PDFs;
         std::map<std::string, RooAddPdf> _RooAddPdfs;
                 
-        /* Enum to check status of PDF models. */
-        enum PDFStatus { none, exists };
-        int _statusGaussian = PDFStatus::none;
-
     private:
         /* Internally store PDFs and paramters. */
         void storeRooRealVar ( const char* key,
@@ -115,17 +111,6 @@ namespace RHD // Rare Higgs Decay
         void storeRooGenericPdf ( const char* key,
                                   const char* formula,
                                   RooArgList& param_list );
-        /*        
-        void storeGaussian ( const char* key,
-                                    RooRealVar& ObsVar,
-                                    RooRealVar& mu,
-                                    RooRealVar& sigma );
-        
-        void storeGaussian ( const char* key,
-                                    RooRealVar& ObsVar,
-                                    RooRealVar& mu,
-                                    RooRealVar& sigma );
-        */
     };
   
 }
