@@ -46,19 +46,18 @@ namespace RHD
         _SAVEDIR("./"),
         _OUTFILENAME("FitData_results.root"),
         _WORKSPACENAME("w")
-    {
-        makePath();
-    }
+    {}
 
     FitData::FitData ( const char* outfileName,
                        const char* saveDir,
                        const char* workspaceName ) :
         _SAVEOPTION(true),
         _SAVEDIR(saveDir),
+        _SAVEPATHFULL((fs::path(saveDir)/fs::path(outfileName)).c_str()), // TODO: check
         _OUTFILENAME(outfileName),
         _WORKSPACENAME(workspaceName)
     {
-        makePath();
+        // makePath();
         std::cout << "Recreating ROOT file " << _SAVEPATHFULL << std::endl;
         
         TFile* outfile = TFile::Open(_SAVEPATHFULL, "RECREATE");
@@ -74,8 +73,9 @@ namespace RHD
     {
         if (!_SAVEOPTION && saveOption) { // i.e. if setting first time
             _SAVEOPTION = true;
-            makePath();
-            std::cout << "Recreating ROOT file \"" << _SAVEPATHFULL << std::endl;
+            //makePath();
+            _SAVEPATHFULL = _OUTFILENAME; // TODO: check
+            std::cout << "Recreating ROOT file " << _SAVEPATHFULL << std::endl;
         
             TFile* outfile = TFile::Open(_SAVEPATHFULL, "RECREATE");
             std::cout << "Creating workspace \"" << _WORKSPACENAME << "\"" << std::endl;
@@ -717,9 +717,9 @@ namespace RHD
     void FitData::makePath()
     {
         if (!_SAVEPATHFULL) {
-            fs::path full_path = fs::weakly_canonical(fs::path(_SAVEDIR) /
-                                                      fs::path(_OUTFILENAME));
-            _SAVEPATHFULL = full_path.c_str();
+            fs::path full_path = fs::path(_SAVEDIR) / fs::path(_OUTFILENAME);
+            std::cout << full_path << std::endl;
+            _SAVEPATHFULL = "FitData_results.root"; //full_path.c_str();
             // TODO: if not exist create
         }
     }

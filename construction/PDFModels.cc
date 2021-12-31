@@ -180,8 +180,8 @@ namespace RHD
         double xlow = ObsVar.getMin();
         double xhigh = ObsVar.getMax();
         
-        storeRooRealVar(Form("%s_mu", prefix), 20., 0., xhigh);
-        storeRooRealVar(Form("%s_sigma", prefix), 10., 1e-2, (xhigh-xlow)/2.);
+        storeRooRealVar(Form("%s_gauss_mu", prefix), 20., 0., xhigh);
+        storeRooRealVar(Form("%s_gauss_sigma", prefix), 10., 1e-2, (xhigh-xlow)/2.);
         storeRooGaussian(Form("%s_gaussian", prefix), ObsVar,
                          _Parameters[Form("%s_gauss_mu", prefix)],
                          _Parameters[Form("%s_gauss_sigma", prefix)]);
