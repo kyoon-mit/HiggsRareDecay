@@ -158,8 +158,7 @@ namespace RHD
                                                  TH1& hist )
     {
         _DataHistograms.insert(std::pair<std::string, RooDataHist>
-                               (name, RooDataHist(name, name, ObsVar, &hist)
-                               )
+                               (name, RooDataHist(name, name, ObsVar, &hist))
                               );
         return _DataHistograms[name];
     }
