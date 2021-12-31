@@ -118,7 +118,8 @@ namespace RHD
                               << " and workspace " << _WORKSPACENAME << std::endl;
                 }
             }
-            RooMultiPdf(multipdfName, multipdfName, pdf_index, pdf_list);
+            RooMultiPdf multipdf(multipdfName, multipdfName, pdf_index, pdf_list);
+            wspace->import(multipdf);
             wspace->writeToFile(_SAVEPATHFULL);
             outfile->Close();
         }
@@ -157,8 +158,7 @@ namespace RHD
                                                  TH1& hist )
     {
         _DataHistograms.insert(std::pair<std::string, RooDataHist>
-                               (name, RooDataHist(name, name,
-                                                  RooArgList(ObsVar), &hist)
+                               (name, RooDataHist(name, name, ObsVar, &hist)
                                )
                               );
         return _DataHistograms[name];
@@ -493,7 +493,7 @@ namespace RHD
                                               const std::vector<double>& initParamValues2,
                                                                   double fTestAlpha )
     /*
-     * Performs likelihood fit of the pdf type provided.
+     * Performs binned likelihood fit of the pdf type provided.
      * Scans from lowest order of pdf type to higher, until value obtained from
      * performing the F-test is greater than fTestAlpha.
      * To faciliate fitting, provide initParamValues in order of parameters in
@@ -586,7 +586,39 @@ namespace RHD
             wspace->writeToFile(_SAVEPATHFULL);
             saveFile->Close();
         }
-    } 
+    }
+
+
+    void FitData::performSignalFit (  RooRealVar* ObsVar,
+                                     RooDataHist* data )
+    /*
+     * Performs binned likelihood fit to the signal data provided.
+     * Explores various pdf types for the fitting model.
+     */
+    {
+        std::vector<RooAbsPdf*> pdfs;
+        auto models = PDFModels();
+
+        pdfs.push_back(models.makeDoubleGaussian(*ObsVar));
+        pdfs.push_back(models.makeTripleGaussian(*ObsVar));
+
+        for (auto const& pdf: pdfs) {
+            performLikelihoodFit(pdf, data, 100);
+            plotPDF(ObsVar, pdf, data);
+        }
+
+        if (_SAVEOPTION) {
+            TFile* saveFile = TFile::Open(_SAVEPATHFULL, "UPDATE");
+            auto wspace = (RooWorkspace*) saveFile->Get(_WORKSPACENAME);
+            for (const auto& pdf: pdfs) {
+                RooArgSet* params = (RooArgSet*) pdf->getParameters(*ObsVar);
+                wspace->import(*pdf);
+                wspace->saveSnapshot(Form("%s_bin_mle", pdf->GetName()), *params, true);
+            }
+            wspace->writeToFile(_SAVEPATHFULL);
+            saveFile->Close();
+        }
+    }
 
     
     /* Evaluate fit.*/

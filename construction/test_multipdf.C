@@ -19,9 +19,10 @@ using namespace RooFit;
 void test_multipdf()
 {
     auto fitting = FitData();
-    fitting.setSaveOption(false);
+    fitting.setSaveOption(true);
 
     const char* file_format = "/home/submit/kyoon/CMSSW_10_6_27/src/Hrare/analysis/outname_mc%d_Wcat.root";
+
     // Create signal histogram from file
     const std::vector<const char*> filenames_WH_ZH {Form(file_format, 10),
                                                     Form(file_format, 11)};
@@ -47,6 +48,10 @@ void test_multipdf()
     // Key variable
     RooRealVar mH("mH", "mH", xlow, xhigh, "GeV");
 
+    // Fit to signal
+    auto sgndata = fitting.makeBinnedData("signal", mH, signal);
+    fitting.performSignalFit(&mH, &sgndata);
+
     // Fit to background
     auto bkgdata = fitting.makeBinnedData("bkg_comb", mH, bkg_comb);
     fitting.performMultiLikelihoodFit("bernXgauss", &mH, &bkgdata, {.61, .31, .24, .037, .047});
@@ -54,5 +59,5 @@ void test_multipdf()
     fitting.performMultiLikelihoodFit("powXgauss", &mH, &bkgdata, {}, {}, 100);
 
     // Save multipdf
-    fitting.saveMultiPdf({"bern8_X_gauss", "lau4_X_gauss", "pow4_X_gauss"}, "bkgmultipdf");
+    fitting.saveMultiPdf({"bern7_X_gauss", "lau4_X_gauss", "pow4_X_gauss"}, "bkgmultipdf");
 }

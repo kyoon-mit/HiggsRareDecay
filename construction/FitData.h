@@ -2,13 +2,15 @@
  * FitData.h
  * 
  * Module to fit signal or background PDFs to data.
+ *
+ * TODO: include less std libraries where possible
  */
 #ifndef FIT_DATA_H
 #define FIT_DATA_H
 
-#include <list>
 #include <vector>
 #include <map>
+#include <memory>
 #include <string>
 
 class TH1;
@@ -79,6 +81,8 @@ namespace RHD // Rare Higgs Decay
                                          const std::vector<double>& initParamValues1={},
                                          const std::vector<double>& initParamValues2={},
                                                              double fTestAlpha=0.05 ); //
+        void performSignalFit ( RooRealVar* ObsVar,
+                                RooDataHist* data );
 
         /* Evaluate fit. */
         void getGoodnessOfFit (); //
