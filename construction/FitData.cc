@@ -160,6 +160,13 @@ namespace RHD
         _DataHistograms.insert(std::pair<std::string, RooDataHist>
                                (name, RooDataHist(name, name, ObsVar, &hist))
                               );
+        if (_SAVEOPTION) {
+            TFile* saveFile = TFile::Open(_SAVEPATHFULL, "UPDATE");
+            auto wspace = (RooWorkspace*) saveFile->Get(_WORKSPACENAME);
+            wspace->import(_DataHistograms[name]);
+            wspace->writeToFile(_SAVEPATHFULL);
+            saveFile->Close();
+        }
         return _DataHistograms[name];
     }
 

@@ -46,11 +46,12 @@ void test_multipdf()
                                             nbins, xlow, xhigh);
 
     // Key variable
+    RooRealVar mH_sgn("mH_sgn", "mH_sgn", xlow, xhigh, "GeV");
     RooRealVar mH("mH", "mH", xlow, xhigh, "GeV");
 
     // Fit to signal
-    auto sgndata = fitting.makeBinnedData("signal", mH, signal);
-    fitting.performSignalFit(&mH, &sgndata);
+    auto sgndata = fitting.makeBinnedData("signal", mH_sgn, signal);
+    fitting.performSignalFit(&mH_sgn, &sgndata);
 
     // Fit to background
     auto bkgdata = fitting.makeBinnedData("bkg_comb", mH, bkg_comb);
