@@ -46,20 +46,43 @@ void test_multipdf()
                                             nbins, xlow, xhigh);
 
     // Key variable
-    // RooRealVar mH_sgn("mH_sgn", "mH_sgn", xlow, xhigh, "GeV");
     RooRealVar mH("mH", "mH", xlow, xhigh, "GeV");
 
     // Fit to signal
-    // auto sgndata = fitting.makeBinnedData("signal", mH_sgn, signal);
     RooDataHist sgndata("signal", "signal", mH, &signal);
-    fitting.performSignalFit(&mH, &sgndata);
+    // fitting.performSignalFit(&mH, &sgndata);
 
     // Fit to background
     auto bkgdata = fitting.makeBinnedData("bkg_comb", mH, bkg_comb);
-    fitting.performMultiLikelihoodFit("bernXgauss", &mH, &bkgdata, {.61, .31, .24, .037, .047});
-    fitting.performMultiLikelihoodFit("lauXgauss", &mH, &bkgdata);
-    fitting.performMultiLikelihoodFit("powXgauss", &mH, &bkgdata, {}, {}, 100);
+    // fitting.performMultiLikelihoodFit("bernXgauss", &mH, &bkgdata, {.61, .31, .24, .037, .047});
+    // fitting.performMultiLikelihoodFit("lauXgauss", &mH, &bkgdata);
+    // fitting.performMultiLikelihoodFit("powXgauss", &mH, &bkgdata, {}, {}, 100);
 
     // Save multipdf
-    fitting.saveMultiPdf({"bern7_X_gauss", "lau4_X_gauss", "pow4_X_gauss"}, "bkgmultipdf");
+    // fitting.saveMultiPdf({"bern7_X_gauss", "lau4_X_gauss", "pow4_X_gauss"}, "bkgmultipdf");
+
+    fitting.plotMultiplePDFs(&mH, &bkgdata, "bern_conv_gauss", {"bern3_X_gauss",
+                                                                "bern4_X_gauss",
+                                                                "bern5_X_gauss",
+                                                                "bern6_X_gauss",
+                                                                "bern7_X_gauss"},
+                                                               {kGreen+2,
+                                                                kBlue,
+                                                                kViolet+7,
+                                                                kMagenta+1,
+                                                                kRed});
+    fitting.plotMultiplePDFs(&mH, &bkgdata, "pow_conv_gauss", {"pow2_X_gauss",
+                                                               "pow3_X_gauss"},
+                                                              {kBlue,
+                                                               kRed});
+    fitting.plotMultiplePDFs(&mH, &bkgdata, "laurent_conv_gauss", {"lau3_X_gauss",
+                                                                   "lau4_X_gauss",
+                                                                   "lau5_X_gauss",
+                                                                   "lau6_X_gauss",
+                                                                   "lau7_X_gauss"},
+                                                                  {kGreen+2,
+                                                                   kBlue,
+                                                                   kViolet+7,
+                                                                   kMagenta+1,
+                                                                   kRed});
 }

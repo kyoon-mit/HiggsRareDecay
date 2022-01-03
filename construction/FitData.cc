@@ -69,19 +69,21 @@ namespace RHD
 
 
     /* Public methods. */
-    void FitData::setSaveOption ( bool saveOption )
+    void FitData::setSaveOption ( bool saveOption, bool recreate )
     {
         if (!_SAVEOPTION && saveOption) { // i.e. if setting first time
             _SAVEOPTION = true;
             //makePath();
             _SAVEPATHFULL = _OUTFILENAME; // TODO: check
-            std::cout << "Recreating ROOT file " << _SAVEPATHFULL << std::endl;
-        
-            TFile* outfile = TFile::Open(_SAVEPATHFULL, "RECREATE");
-            std::cout << "Creating workspace \"" << _WORKSPACENAME << "\"" << std::endl;
-            RooWorkspace w(_WORKSPACENAME);
-            w.Write();
-            outfile->Close();
+
+            if (recreate) {
+                std::cout << "Recreating ROOT file " << _SAVEPATHFULL << std::endl;
+                TFile* outfile = TFile::Open(_SAVEPATHFULL, "RECREATE");
+                std::cout << "Creating workspace \"" << _WORKSPACENAME << "\"" << std::endl;
+                RooWorkspace w(_WORKSPACENAME);
+                w.Write();
+                outfile->Close();
+            }   
         } else {
             _SAVEOPTION = saveOption;
         }
@@ -745,8 +747,70 @@ namespace RHD
         p3.Draw();
         c.Update();
 
+        if (_SAVEOPTION) {
+            fs::path save_path = fs::path(_SAVEDIR) / fs::path("plots") /
+                                 fs::path(Form("%s.jpg", pdf->GetName()));
+            c.SaveAs(save_path.c_str());
+        }
+    }
+
+
+    void FitData::plotMultiplePDFs (  RooRealVar* ObsVar,
+                                     RooDataHist* data,
+                                      const char* plotName,
+                                      const std::vector<const char*>& pdfNames,
+                                              const std::vector<int>& colorScheme )
+    /*
+     * Searches for pdfs in OUTFILE and plots them on a single canvas.
+     * Saves the canvas in the plots directory.
+     * If SAVEOPTION = false, none of these will occur.
+     */
+    {
+        if (!_SAVEOPTION) return;
+        
+        // Open file
+        TFile* saveFile = TFile::Open(_SAVEPATHFULL, "READ");
+        auto wspace = (RooWorkspace*) saveFile->Get(_WORKSPACENAME);
+        
+        // PDF and data plot
+        TCanvas c;
+        RooPlot* frame = ObsVar->frame(RooFit::Title(plotName));
+        data->plotOn(frame);
+
+        // Check if pdfNames and colorScheme have same size
+        if (pdfNames.size() != colorScheme.size()) {
+            throw std::invalid_argument("pdfNames and colorScheme must be of same size.");
+        }
+
+        // Legend
+        TLegend legend(.72, .64, .86, .88);
+        legend.SetFillColor(kWhite);
+        legend.SetLineColor(kWhite);
+
+        for (int i=0; i<pdfNames.size(); i++) {
+            const char* pdf_name = pdfNames.at(i);
+            RooAbsPdf* pdf = wspace->pdf(pdf_name);
+            if (!pdf) {
+                std::cout << "PDF of name " << pdf_name << " not found" << std::endl;
+            } else {
+                pdf->plotOn(frame,
+                            RooFit::LineColor(colorScheme.at(i)),
+                            RooFit::LineStyle(kDashed),
+                            RooFit::Name(pdf_name));
+                legend.AddEntry(frame->findObject(pdf_name), pdf_name, "L");
+            }
+        }
+
+        // Draw on canvas
+        gStyle->SetOptStat(0);
+        c.SetCanvasSize(1500, 780);
+        frame->Draw();
+        legend.Draw();
+        c.Update();
+
         fs::path save_path = fs::path(_SAVEDIR) / fs::path("plots") /
-                             fs::path(Form("%s.jpg", pdf->GetName()));
+                             fs::path(Form("%s.jpg", plotName));
+                                      // TODO: warning if file already exists
         c.SaveAs(save_path.c_str());
     }
 
@@ -757,7 +821,7 @@ namespace RHD
         if (!_SAVEPATHFULL) {
             fs::path full_path = fs::path(_SAVEDIR) / fs::path(_OUTFILENAME);
             std::cout << full_path << std::endl;
-            _SAVEPATHFULL = "FitData_results.root"; //full_path.c_str();
+            _SAVEPATHFULL = "FitData_results.root"; // TODO: full_path.c_str() doesn't work
             // TODO: if not exist create
         }
     }

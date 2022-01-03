@@ -107,13 +107,17 @@ namespace RHD // Rare Higgs Decay
         void plotPDF (  RooRealVar* ObsVar,
                          RooAbsPdf* pdf,
                        RooDataHist* data );
+        void plotMultiplePDFs (                     RooRealVar* ObsVar,
+                                                   RooDataHist* data,
+                                                    const char* plotName,
+                                const std::vector<const char*>& pdfNames,
+                                        const std::vector<int>& colorScheme );
         
-        inline void setSaveDir ( const char* dir ) { _SAVEDIR = dir; }
-
         /* Save to file. */
+        inline void setSaveDir ( const char* dir ) { _SAVEDIR = dir; }
         inline void setOutfileName ( const char* fileName ) { _OUTFILENAME = fileName; }
         inline void setWorkspaceName ( const char* wspaceName ) { _WORKSPACENAME = wspaceName; }
-        void setSaveOption ( bool saveOption );
+        void setSaveOption ( bool saveOption, bool recreate=false );
         void saveMultiPdf ( const std::vector<const char*>& pdfNameList,
                                                 const char* multipdfName );
         void saveFitResults (); //
