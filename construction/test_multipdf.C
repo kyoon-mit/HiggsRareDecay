@@ -23,18 +23,18 @@ void test_multipdf()
 
     const char* file_format = "/home/submit/kyoon/CMSSW_10_6_27/src/Hrare/analysis/outname_mc%d_Wcat.root";
 
+    double xlow = 40., xhigh = 200.;
+    int nbins = (int) xhigh - xlow;
+
     // Create signal histogram from file
     const std::vector<const char*> filenames_WH_ZH {Form(file_format, 10),
                                                     Form(file_format, 11)};
 
     TH1F signal = fitting.fetchHistogram (filenames_WH_ZH,
                                           "events", "HCandMass", "signal", "signal WH and ZH",
-                                          100, 100., 150.);
+                                          nbins*2, xlow, xhigh);
 
     // Create background histograms from file
-    double xlow = 40., xhigh = 200.;
-    int nbins = (int) xhigh - xlow;
-
     const std::vector<const char*> filenames_ZW_H {Form(file_format, 0),
                                                    Form(file_format, 1),
                                                    Form(file_format, 2),
@@ -46,12 +46,13 @@ void test_multipdf()
                                             nbins, xlow, xhigh);
 
     // Key variable
-    RooRealVar mH_sgn("mH_sgn", "mH_sgn", xlow, xhigh, "GeV");
+    // RooRealVar mH_sgn("mH_sgn", "mH_sgn", xlow, xhigh, "GeV");
     RooRealVar mH("mH", "mH", xlow, xhigh, "GeV");
 
     // Fit to signal
-    auto sgndata = fitting.makeBinnedData("signal", mH_sgn, signal);
-    fitting.performSignalFit(&mH_sgn, &sgndata);
+    // auto sgndata = fitting.makeBinnedData("signal", mH_sgn, signal);
+    RooDataHist sgndata("signal", "signal", mH, &signal);
+    fitting.performSignalFit(&mH, &sgndata);
 
     // Fit to background
     auto bkgdata = fitting.makeBinnedData("bkg_comb", mH, bkg_comb);
