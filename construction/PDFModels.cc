@@ -22,6 +22,7 @@
 #include "RooAbsPdf.h"
 #include "RooAddPdf.h"
 #include "RooBernstein.h"
+#include "RooExponential.h"
 #include "RooGaussian.h"
 #include "RooFFTConvPdf.h"
 #include "HiggsAnalysis/CombinedLimit/interface/HGGRooPdfs.h"
@@ -260,11 +261,51 @@ namespace RHD
     }
 
 
+    RooAbsPdf* PDFModels::makeExponentialSeries ( RooRealVar& ObsVar,
+                                                         int order )
+    /*
+     * PDF built from the expression of the following form:
+     * c1*exp(p1*ObsVar) + c2*exp(p2*ObsVar) + ... + (1-c1-c2-...-c(n-1))*exp(pn*ObsVar)
+     */
+    {
+        auto prefix = Form("expsrs%d", order); // Exponential series
+        auto clist_name = Form("%s_coeffs", prefix);
+        auto elist_name = Form("%s_exponentials", prefix);
+        auto args_coeff = RooArgList(clist_name);
+        auto args_exp   = RooArgList(elist_name);
+
+        char* coeff_name;
+        char* pow_name;
+        char* exp_name;
+
+        for (int i=1; i<=order; i++) {
+            if (i < order) {
+                coeff_name = Form("%s_c%d", prefix, i);
+                storeRooRealVar(coeff_name, .9-(i-1.)/(order-1.), 1e-4, 1-1e-4);
+                args_coeff.add(_Parameters[coeff_name]);
+            }
+            pow_name = Form("%s_p%d", prefix, i);
+            exp_name = Form("%s_exp%d", prefix, i);
+            storeRooRealVar(pow_name, std::max(-1., -.04*(i+1.)), -1., 0.);
+            storeRooExponential(exp_name, ObsVar, _Parameters[pow_name]);
+            args_exp.add(_Parameters[exp_name]);
+        }
+
+        storeRooArgList(clist_name, args_coeff);
+        storeRooArgList(elist_name, args_exp);
+
+        RooAbsPdf* pdf = new RooAddPdf(prefix, prefix,
+                                       _RooArgLists[elist_name],
+                                       _RooArgLists[clist_name], true);
+        return pdf;
+    }
+
+
     RooAbsPdf* PDFModels::makePowerSeries ( RooRealVar& ObsVar,
                                                     int order )
     /*
-     * PDF built from expression of the following form:
-     * c1*ObsVar^p1 + c2*ObsVar^p2 + ... + (1-c1-c2-...-cn)*ObsVar^pn
+     * PDF built from the expression of the following form:
+     * c1*ObsVar^p1 + c2*ObsVar^p2 + ... + (1-c1-c2-...-c(n-1))*ObsVar^pn
      */
     {
         
@@ -444,6 +485,17 @@ namespace RHD
                     );
         // std::cout << "Created Gaussian PDF with the following key: ";
         // std::cout << key << std::endl;
+    }
+
+    void PDFModels::storeRooExponential( const char* key,
+                                         RooRealVar& ObsVar,
+                                         RooRealVar& power )
+    {
+        _PDFs.insert(std::pair<std::string, std::unique_ptr<RooAbsPdf>>
+                     (key, std::make_unique<RooExponential>
+                      (RooExponential(key, key, ObsVar, power))
+                     )
+                    );
     }
 
     void PDFModels::storeRooPower ( const char* key,

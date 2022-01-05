@@ -56,7 +56,7 @@ namespace RHD // Rare Higgs Decay
         RooAbsPdf* makeTripleGaussian ( RooRealVar& ObsVar );
 
         /* Create falling spectrum PDFs. Make sure to delete. */
-        RooAbsPdf* makeExponentialSeries ( RooRealVar& ObsVar, int order ); //
+        RooAbsPdf* makeExponentialSeries ( RooRealVar& ObsVar, int order );
         RooAbsPdf* makePowerSeries ( RooRealVar& ObsVar, int order );
         RooAbsPdf* makeBernsteinPoly ( RooRealVar& ObsVar, int order);
         RooAbsPdf* makeBernsteinFast ( RooRealVar& ObsVar, int order); // see if any difference
@@ -94,6 +94,10 @@ namespace RHD // Rare Higgs Decay
                                 RooRealVar& ObsVar,
                                 RooRealVar& mu,
                                 RooRealVar& sigma );
+
+        void storeRooExponential( const char* key,
+                                  RooRealVar& ObsVar,
+                                  RooRealVar& power );
 
         void storeRooPower ( const char* key,
                              RooRealVar& ObsVar,
