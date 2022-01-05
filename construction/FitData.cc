@@ -422,7 +422,17 @@ namespace RHD
                                         initParamValues2.begin() + std::min(order, plist2_size));
         
             // Make PDF according to type given
-            if (std::strcmp(pdfType, "bernXgauss") == 0) {
+            if (std::strcmp(pdfType, "expXgauss") == 0) {
+                pdfs.push_back(models.makeExponentialConvGaussian(*ObsVar, order));
+                retry = 1;
+                models.setMultiVals(Form("expsrs%d_c", order),
+                                    1, std::min(order, plist1_size),
+                                    params1);
+                models.setMultiVals(Form("expsrs%d_p", order),
+                                    1, std::min(order, plist2_size),
+                                    params2);
+            
+            } else if (std::strcmp(pdfType, "bernXgauss") == 0) {
                 pdfs.push_back(models.makeBernsteinConvGaussian(*ObsVar, order));
                 retry = 1;
                 models.setMultiVals(Form("bern%d_c", order),
@@ -453,13 +463,16 @@ namespace RHD
             }
 
             // Perform chi2 fit
-            if (std::strcmp(pdfType, "powXgauss") == 0) {
-                //                models.setVal("gauss_mu", 19.6);
-                //                models.setVal("gauss_sigma", 10.);
-            }
             RooFitResult fit = performChi2Fit(pdfs.at(order-1), data, 150, retry);
             nlls.push_back(fit.minNll());
             dofs.push_back(fit.covarianceMatrix().GetNcols());
+
+            if (std::strcmp(pdfType, "powXgauss") == 0) {
+                if (order < 2) {
+                    order++;
+                    continue;
+                }
+            }
             
             if (order >= 2) {
                 // Calculate F-test probability using chi2 distribution
@@ -530,7 +543,17 @@ namespace RHD
                                         initParamValues2.begin() + std::min(order, plist2_size));
         
             // Make PDF according to type given
-            if (std::strcmp(pdfType, "bernXgauss") == 0) {
+            if (std::strcmp(pdfType, "expXgauss") == 0) {
+                pdfs.push_back(models.makeExponentialConvGaussian(*ObsVar, order));
+                retry = 1;
+                models.setMultiVals(Form("expsrs%d_c", order),
+                                    1, std::min(order, plist1_size),
+                                    params1);
+                models.setMultiVals(Form("expsrs%d_p", order),
+                                    1, std::min(order, plist2_size),
+                                    params2);
+                
+            } else if (std::strcmp(pdfType, "bernXgauss") == 0) {
                 pdfs.push_back(models.makeBernsteinConvGaussian(*ObsVar, order));
                 retry = 1;
                 models.setMultiVals(Form("bern%d_c", order),
@@ -562,6 +585,13 @@ namespace RHD
             RooFitResult fit = performLikelihoodFit(pdfs.at(order-1), data, 150, retry);
             nlls.push_back(fit.minNll());
             dofs.push_back(fit.covarianceMatrix().GetNcols());
+
+            if (std::strcmp(pdfType, "powXgauss") == 0) {
+                if (order < 2) {
+                    order++;
+                    continue;
+                }
+            }
             
             if (order >= 2) {
                 // Calculate F-test probability using chi2 distribution
@@ -578,7 +608,7 @@ namespace RHD
             
             // Plot individual PDFs
             plotPDF(ObsVar, pdfs.at(order-1), data);
-            if ((std::strcmp("powXgauss", pdfType) == 0) && order > 4) break;
+            if ((std::strcmp("powXgauss", pdfType) == 0) && order >= 4) break; //
             order++;
         } // End while-loop
 
@@ -593,6 +623,100 @@ namespace RHD
             }
             wspace->writeToFile(_SAVEPATHFULL);
             saveFile->Close();
+        }
+    }
+
+
+    void FitData::manuallyFitParams (  const char* pdfType,
+                                       int order,
+                                       const char* plotTitle,
+                                       RooRealVar* ObsVar,
+                                      RooDataHist* data,
+                                      const std::vector<double>& initParamValues1,
+                                      const std::vector<double>& initParamValues2 )
+     /*
+     * Set parameters in given PDF and plot.
+     */
+    {
+        auto models = PDFModels();
+
+        // Lambda function to plot
+        auto lambda_plot = [this]( const char* title,
+                                    RooAbsPdf* pdf,
+                                  RooDataHist* data,
+                                   RooRealVar* x )
+        {
+            // PDF and data plot
+            RooPlot* frame = x->frame(RooFit::Title(title));
+            data->plotOn(frame);
+            pdf->plotOn(frame,
+                        RooFit::LineColor(kRed),
+                        RooFit::LineStyle(kDashed),
+                        RooFit::Name(pdf->GetName()));
+            pdf->paramOn(frame, RooFit::Layout(0.72, 0.88, 0.86));
+            frame->getAttText()->SetTextFont(43);
+            frame->getAttText()->SetTextSize(15);
+
+            // Draw on canvas
+            gStyle->SetOptStat(0);
+            TCanvas c(pdf->GetName(), pdf->GetTitle());
+            c.SetCanvasSize(640, 480);
+
+            c.cd();
+            frame->Draw();
+            c.Update();
+
+            fs::path save_path = fs::path(_SAVEDIR) / fs::path("plots_manual") /
+                             fs::path(Form("%s.jpg", title));
+            c.SaveAs(save_path.c_str());
+        };
+
+        // Set initial parameter values for fit
+        int plist1_size = initParamValues1.size();
+        int plist2_size = initParamValues2.size();
+        std::vector<double> params1(initParamValues1.begin(),
+                                    initParamValues1.begin() + std::min(order, plist1_size));
+        std::vector<double> params2(initParamValues2.begin(),
+                                    initParamValues2.begin() + std::min(order, plist2_size));
+        
+        // Make PDF according to type given
+        if (std::strcmp(pdfType, "expXgauss") == 0) {
+            auto pdf = models.makeExponentialConvGaussian(*ObsVar, order);
+            models.setMultiVals(Form("expsrs%d_c", order),
+                                1, std::min(order, plist1_size),
+                                params1);
+            models.setMultiVals(Form("expsrs%d_p", order),
+                                1, std::min(order, plist2_size),
+                                params2);
+            lambda_plot(plotTitle, pdf, data, ObsVar);
+            
+        } else if (std::strcmp(pdfType, "bernXgauss") == 0) {
+            auto pdf = models.makeBernsteinConvGaussian(*ObsVar, order);
+            models.setMultiVals(Form("bern%d_c", order),
+                                0, std::min(order, plist1_size),
+                                params1);
+            lambda_plot(plotTitle, pdf, data, ObsVar);
+            
+        } else if (std::strcmp(pdfType, "lauXgauss") == 0) {
+            auto pdf = models.makeLaurentConvGaussian(*ObsVar, order);
+            models.setMultiVals(Form("lau%d_h", order),
+                                1, std::min(order+1, plist1_size+1),
+                                params1);
+            models.setMultiVals(Form("lau%d_l", order),
+                                1, std::min(order+1, plist2_size+1),
+                                params2);
+            lambda_plot(plotTitle, pdf, data, ObsVar);
+
+        } else if (std::strcmp(pdfType, "powXgauss") == 0) {
+            auto pdf = models.makePowerConvGaussian(*ObsVar, order);
+            models.setMultiVals(Form("powsrs%d_c", order),
+                                1, std::min(order+1, plist1_size+1),
+                                params1);
+            models.setMultiVals(Form("powsrs%d_p", order),
+                                1, std::min(order+1, plist2_size+1),
+                                params2);
+            lambda_plot(plotTitle, pdf, data, ObsVar);
+            
         }
     }
 

@@ -80,7 +80,14 @@ namespace RHD // Rare Higgs Decay
                                                         RooDataSet* data, // unbinned
                                          const std::vector<double>& initParamValues1={},
                                          const std::vector<double>& initParamValues2={},
-                                                             double fTestAlpha=0.05 ); //
+                                                             double fTestAlpha=0.05 );
+        void manuallyFitParams (                const char* pdfType,
+                                                        int order,
+                                                const char* plotTitle,
+                                                RooRealVar* ObsVar,
+                                               RooDataHist* data,
+                                 const std::vector<double>& initParamValues1={},
+                                 const std::vector<double>& initParamValues2={} );
         void performSignalFit ( RooRealVar* ObsVar,
                                 RooDataHist* data );
 

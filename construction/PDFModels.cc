@@ -92,14 +92,65 @@ namespace RHD
             _Parameters.at(key).setVal(values.at(i-lowOrder));
         }
     }
+
+
+    RooAbsPdf* PDFModels::makeExponentialConvGaussian ( RooRealVar& ObsVar,
+                                                                int order )
+    {
+        // Make Gaussian
+        RooAbsPdf* gauss_pdf = makeGaussian(ObsVar, Form("expsrs%d", order));
+        gauss_pdf = _PDFs[Form("expsrs%d_gaussian", order)].get();
+
+        // Make Exponential Series
+        RooAbsPdf* exp_pdf = makeExponentialSeries(ObsVar, order);
+
+        // Make Convolution: Exponential Series (X) Gaussian
+        auto conv_name = Form("exp%d_X_gauss", order);
+        _PDFs.insert(std::pair<std::string, std::unique_ptr<RooAbsPdf>>
+                     (conv_name, std::make_unique<RooFFTConvPdf>
+                      (RooFFTConvPdf(conv_name, conv_name,
+                                     ObsVar, *exp_pdf, *gauss_pdf))
+                     )
+                    ); // TODO: functionize this block
+
+        std::cout << " Created Exponential (X) Gaussian PDF with the following key: ";
+        std::cout << conv_name << std::endl;
+
+        return _PDFs[conv_name].get();
+    }
+
+
+    RooAbsPdf* PDFModels::makePowerConvGaussian ( RooRealVar& ObsVar,
+                                                          int order )
+    {
+        // Make Gaussian
+        RooAbsPdf* gauss_pdf = makeGaussian(ObsVar, Form("powsrs%d", order));
+        gauss_pdf = _PDFs[Form("powsrs%d_gaussian", order)].get();
+
+        // Make Power Series
+        RooAbsPdf* pow_pdf = makePowerSeries(ObsVar, order);
+
+        // Make Convolution: Power Series (X) Gaussian
+        auto conv_name = Form("pow%d_X_gauss", order);
+        _PDFs.insert(std::pair<std::string, std::unique_ptr<RooAbsPdf>>
+                     (conv_name, std::make_unique<RooFFTConvPdf>
+                      (RooFFTConvPdf(conv_name, conv_name,
+                                     ObsVar, *pow_pdf, *gauss_pdf))
+                     )
+                    );
+
+        std::cout << "Created Power (X) Gaussian PDF with the following key: ";
+        std::cout << conv_name << std::endl;
+
+        return _PDFs[conv_name].get();
+    }
     
     
     RooAbsPdf* PDFModels::makeBernsteinConvGaussian ( RooRealVar& ObsVar,
                                                               int order )
     {
-        // Make Gaussian if not exist
-        RooAbsPdf* gauss_pdf;
-        gauss_pdf = makeGaussian(ObsVar, Form("bern%d", order));
+        // Make Gaussian
+        RooAbsPdf* gauss_pdf = makeGaussian(ObsVar, Form("bern%d", order));
         gauss_pdf = _PDFs[Form("bern%d_gaussian", order)].get();
 
         // Make Bernstein Polynomial
@@ -124,9 +175,8 @@ namespace RHD
     RooAbsPdf* PDFModels::makeLaurentConvGaussian ( RooRealVar& ObsVar,
                                                             int order )
     {
-        // Make Gaussian if not exist
-        RooAbsPdf* gauss_pdf;
-        gauss_pdf = makeGaussian(ObsVar, Form("lau%d", order));
+        // Make Gaussian
+        RooAbsPdf* gauss_pdf = makeGaussian(ObsVar, Form("lau%d", order));
         gauss_pdf = _PDFs[Form("lau%d_gaussian", order)].get();
 
         // Make Laurent Series
@@ -142,33 +192,6 @@ namespace RHD
                     );
 
         std::cout << "Created Laurent (X) Gaussian PDF with the following key: ";
-        std::cout << conv_name << std::endl;
-
-        return _PDFs[conv_name].get();
-    }
-
-
-    RooAbsPdf* PDFModels::makePowerConvGaussian ( RooRealVar& ObsVar,
-                                                          int order )
-    {
-        // Make Gaussian if not exist
-        RooAbsPdf* gauss_pdf;
-        gauss_pdf = makeGaussian(ObsVar, Form("powsrs%d", order));
-        gauss_pdf = _PDFs[Form("powsrs%d_gaussian", order)].get();
-
-        // Make Power Series
-        RooAbsPdf* pow_pdf = makePowerSeries(ObsVar, order);
-
-        // Make Convolution: Power Series (X) Gaussian
-        auto conv_name = Form("pow%d_X_gauss", order);
-        _PDFs.insert(std::pair<std::string, std::unique_ptr<RooAbsPdf>>
-                     (conv_name, std::make_unique<RooFFTConvPdf>
-                      (RooFFTConvPdf(conv_name, conv_name,
-                                     ObsVar, *pow_pdf, *gauss_pdf))
-                     )
-                    );
-
-        std::cout << "Created Power (X) Gaussian PDF with the following key: ";
         std::cout << conv_name << std::endl;
 
         return _PDFs[conv_name].get();
@@ -288,7 +311,7 @@ namespace RHD
             exp_name = Form("%s_exp%d", prefix, i);
             storeRooRealVar(pow_name, std::max(-1., -.04*(i+1.)), -1., 0.);
             storeRooExponential(exp_name, ObsVar, _Parameters[pow_name]);
-            args_exp.add(_Parameters[exp_name]);
+            args_exp.add(*_PDFs[exp_name]);
         }
 
         storeRooArgList(clist_name, args_coeff);

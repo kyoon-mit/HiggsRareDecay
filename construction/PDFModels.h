@@ -43,7 +43,7 @@ namespace RHD // Rare Higgs Decay
                             std::vector<double>& values );
 
         /* Make convolutions with Gaussian. */
-        RooAbsPdf* makeExponentialConvGaussian ( RooRealVar& ObsVar, int order ); //
+        RooAbsPdf* makeExponentialConvGaussian ( RooRealVar& ObsVar, int order );
         RooAbsPdf* makePowerConvGaussian ( RooRealVar& ObsVar, int order );
         RooAbsPdf* makeBernsteinConvGaussian ( RooRealVar& ObsVar, int order );
         RooAbsPdf* makeLaurentConvGaussian ( RooRealVar& ObsVar, int order );
@@ -52,7 +52,7 @@ namespace RHD // Rare Higgs Decay
         RooAbsPdf* makeGaussian ( RooRealVar& ObsVar, const char* prefix );
         RooAbsPdf* makeBreitWigner ( RooRealVar& ObsVar ); //
         RooAbsPdf* makeVoigtian ( RooRealVar& ObsVar ); //
-        RooAbsPdf* makeDoubleGaussian ( RooRealVar& ObsVar ); //test
+        RooAbsPdf* makeDoubleGaussian ( RooRealVar& ObsVar );
         RooAbsPdf* makeTripleGaussian ( RooRealVar& ObsVar );
 
         /* Create falling spectrum PDFs. Make sure to delete. */
