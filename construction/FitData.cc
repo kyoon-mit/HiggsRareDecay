@@ -2,6 +2,7 @@
 #include "PDFModels.h"
 
 #include <boost/filesystem.hpp>
+
 // --- STD ---
 #include <iostream>
 #include <stdexcept>
@@ -34,6 +35,8 @@
 #include "RooHist.h"
 #include "RooPlot.h"
 
+#include "HiggsAnalysis/CombinedLimit/interface/RooMultiPdf.h"
+
 using namespace RHD; // TODO: delete after testing
 using namespace RooFit;
 namespace fs = boost::filesystem;
@@ -56,11 +59,13 @@ namespace RHD
         _OUTFILENAME(outfileName),
         _WORKSPACENAME(workspaceName)
     {
+        // fs::path save_path = fs::canonical(fs::path(_SAVEDIR)) / fs::path(_OUTFILENAME);
+        // _SAVEPATHFULL = save_path.string();
         makePaths();
 
         std::cout << "Recreating ROOT file " << _SAVEPATHFULL << std::endl;
         
-        TFile* outfile = TFile::Open(_SAVEPATHFULL, "RECREATE");
+        TFile* outfile = TFile::Open(_SAVEPATHFULL.c_str(), "RECREATE");
         std::cout << "Creating workspace \"" << _WORKSPACENAME << "\"" << std::endl;
         RooWorkspace w(_WORKSPACENAME);
         w.Write();
@@ -77,7 +82,7 @@ namespace RHD
             
             if (recreate) {
                 std::cout << "Recreating ROOT file " << _SAVEPATHFULL << std::endl;
-                TFile* outfile = TFile::Open(_SAVEPATHFULL, "RECREATE");
+                TFile* outfile = TFile::Open(_SAVEPATHFULL.c_str(), "RECREATE");
                 std::cout << "Creating workspace \"" << _WORKSPACENAME << "\"" << std::endl;
                 RooWorkspace w(_WORKSPACENAME);
                 w.Write();
@@ -107,7 +112,7 @@ namespace RHD
             RooArgList pdf_list;
 
             // Open OUTFILE
-            TFile* outfile = TFile::Open(_SAVEPATHFULL, "UPDATE");
+            TFile* outfile = TFile::Open(_SAVEPATHFULL.c_str(), "UPDATE");
             auto wspace = (RooWorkspace*) outfile->Get(_WORKSPACENAME);
             for (auto const& pdf_name: pdfNameList) {
                 RooAbsPdf* pdf = wspace->pdf(pdf_name);
@@ -121,7 +126,7 @@ namespace RHD
             }
             RooMultiPdf multipdf(multipdfName, multipdfName, pdf_index, pdf_list);
             wspace->import(multipdf);
-            wspace->writeToFile(_SAVEPATHFULL);
+            wspace->writeToFile(_SAVEPATHFULL.c_str());
             outfile->Close();
         }
     }
@@ -162,10 +167,10 @@ namespace RHD
                                (name, RooDataHist(name, name, ObsVar, &hist))
                               );
         if (_SAVEOPTION) {
-            TFile* saveFile = TFile::Open(_SAVEPATHFULL, "UPDATE");
+            TFile* saveFile = TFile::Open(_SAVEPATHFULL.c_str(), "UPDATE");
             auto wspace = (RooWorkspace*) saveFile->Get(_WORKSPACENAME);
             wspace->import(_DataHistograms[name]);
-            wspace->writeToFile(_SAVEPATHFULL);
+            wspace->writeToFile(_SAVEPATHFULL.c_str());
             saveFile->Close();
         }
         return _DataHistograms[name];
@@ -183,10 +188,11 @@ namespace RHD
                          (name, RooDataSet(name, name, tree, ObsVar))
                         );
         if (_SAVEOPTION) {
-            TFile* saveFile = TFile::Open(_SAVEPATHFULL, "UPDATE");
+            std::cout << _SAVEPATHFULL << std::endl;
+            TFile* saveFile = TFile::Open(_SAVEPATHFULL.c_str(), "UPDATE");
             auto wspace = (RooWorkspace*) saveFile->Get(_WORKSPACENAME);
             wspace->import(_DataSets[name]);
-            wspace->writeToFile(_SAVEPATHFULL);
+            wspace->writeToFile(_SAVEPATHFULL.c_str());
             saveFile->Close();
         }
         return _DataSets[name];
@@ -514,14 +520,14 @@ namespace RHD
 
         // Save to workspace and file
         if (_SAVEOPTION) {
-            TFile* saveFile = TFile::Open(_SAVEPATHFULL, "UPDATE");
+            TFile* saveFile = TFile::Open(_SAVEPATHFULL.c_str(), "UPDATE");
             auto wspace = (RooWorkspace*) saveFile->Get(_WORKSPACENAME);
             for (const auto& pdf: pdfs) {
                 RooArgSet* params = (RooArgSet*) pdf->getParameters(*ObsVar);
                 wspace->import(*pdf);
                 wspace->saveSnapshot(Form("%s_chi2", pdf->GetName()), *params, true);
             }
-            wspace->writeToFile(_SAVEPATHFULL);
+            wspace->writeToFile(_SAVEPATHFULL.c_str());
             saveFile->Close();
         }
     }
@@ -634,14 +640,14 @@ namespace RHD
 
         // Save to workspace and file
         if (_SAVEOPTION) {
-            TFile* saveFile = TFile::Open(_SAVEPATHFULL, "UPDATE");
+            TFile* saveFile = TFile::Open(_SAVEPATHFULL.c_str(), "UPDATE");
             auto wspace = (RooWorkspace*) saveFile->Get(_WORKSPACENAME);
             for (const auto& pdf: pdfs) {
                 RooArgSet* params = (RooArgSet*) pdf->getParameters(*ObsVar);
                 wspace->import(*pdf);
                 wspace->saveSnapshot(Form("%s_bin_mle", pdf->GetName()), *params, true);
             }
-            wspace->writeToFile(_SAVEPATHFULL);
+            wspace->writeToFile(_SAVEPATHFULL.c_str());
             saveFile->Close();
         }
     }
@@ -761,14 +767,14 @@ namespace RHD
         }
 
         if (_SAVEOPTION) {
-            TFile* saveFile = TFile::Open(_SAVEPATHFULL, "UPDATE");
+            TFile* saveFile = TFile::Open(_SAVEPATHFULL.c_str(), "UPDATE");
             auto wspace = (RooWorkspace*) saveFile->Get(_WORKSPACENAME);
             for (const auto& pdf: pdfs) {
                 RooArgSet* params = (RooArgSet*) pdf->getParameters(*ObsVar);
                 wspace->import(*pdf);
                 wspace->saveSnapshot(Form("%s_bin_mle", pdf->GetName()), *params, true);
             }
-            wspace->writeToFile(_SAVEPATHFULL);
+            wspace->writeToFile(_SAVEPATHFULL.c_str());
             saveFile->Close();
         }
     }
@@ -976,7 +982,7 @@ namespace RHD
         if (!_SAVEOPTION) return;
         
         // Open file
-        TFile* saveFile = TFile::Open(_SAVEPATHFULL, "READ");
+        TFile* saveFile = TFile::Open(_SAVEPATHFULL.c_str(), "READ");
         auto wspace = (RooWorkspace*) saveFile->Get(_WORKSPACENAME);
         
         // PDF and data plot
@@ -1026,12 +1032,10 @@ namespace RHD
     void FitData::makePaths ()
     {
         fs::path save_path = fs::canonical(fs::path(_SAVEDIR)) / fs::path(_OUTFILENAME);
-        std::string s = save_path.string();
-        _SAVEPATHFULL = s.c_str();
+        _SAVEPATHFULL = save_path.string();
 
-        fs::path plot_path = fs::canonical(fs::path(_SAVEDIR)) / fs::path(_PLOTPATH);
-        std::string p = plot_path.string();
-        _PLOTPATH = p.c_str();
+        fs::path plot_path = fs::canonical(fs::path(_SAVEDIR)) / fs::path("plots");
+        _PLOTPATH = plot_path.string();
 
         if (!fs::exists(_PLOTPATH)) fs::create_directory(_PLOTPATH);
     }

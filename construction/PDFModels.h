@@ -120,6 +120,11 @@ namespace RHD // Rare Higgs Decay
         void storeRooGenericPdf ( const char* key,
                                   const char* formula,
                                   RooArgList& param_list );
+
+        void storeRooFFTConvPdf ( const char* key,
+                                  RooRealVar& ObsVar,
+                                   RooAbsPdf* pdf1,
+                                   RooAbsPdf* pdf2 );
     };
   
 }

@@ -100,19 +100,13 @@ namespace RHD
     {
         // Make Gaussian
         RooAbsPdf* gauss_pdf = makeGaussian(ObsVar, Form("expsrs%d", order));
-        gauss_pdf = _PDFs[Form("expsrs%d_gaussian", order)].get();
 
         // Make Exponential Series
         RooAbsPdf* exp_pdf = makeExponentialSeries(ObsVar, order);
 
         // Make Convolution: Exponential Series (X) Gaussian
         auto conv_name = Form("exp%d_X_gauss", order);
-        _PDFs.insert(std::pair<std::string, std::unique_ptr<RooAbsPdf>>
-                     (conv_name, std::make_unique<RooFFTConvPdf>
-                      (RooFFTConvPdf(conv_name, conv_name,
-                                     ObsVar, *exp_pdf, *gauss_pdf))
-                     )
-                    ); // TODO: functionize this block
+        storeRooFFTConvPdf(conv_name, ObsVar, exp_pdf, gauss_pdf);
 
         std::cout << " Created Exponential (X) Gaussian PDF with the following key: ";
         std::cout << conv_name << std::endl;
@@ -126,19 +120,13 @@ namespace RHD
     {
         // Make Gaussian
         RooAbsPdf* gauss_pdf = makeGaussian(ObsVar, Form("powsrs%d", order));
-        gauss_pdf = _PDFs[Form("powsrs%d_gaussian", order)].get();
 
         // Make Power Series
         RooAbsPdf* pow_pdf = makePowerSeries(ObsVar, order);
 
         // Make Convolution: Power Series (X) Gaussian
         auto conv_name = Form("pow%d_X_gauss", order);
-        _PDFs.insert(std::pair<std::string, std::unique_ptr<RooAbsPdf>>
-                     (conv_name, std::make_unique<RooFFTConvPdf>
-                      (RooFFTConvPdf(conv_name, conv_name,
-                                     ObsVar, *pow_pdf, *gauss_pdf))
-                     )
-                    );
+        storeRooFFTConvPdf(conv_name, ObsVar, pow_pdf, gauss_pdf);
 
         std::cout << "Created Power (X) Gaussian PDF with the following key: ";
         std::cout << conv_name << std::endl;
@@ -152,19 +140,13 @@ namespace RHD
     {
         // Make Gaussian
         RooAbsPdf* gauss_pdf = makeGaussian(ObsVar, Form("bern%d", order));
-        gauss_pdf = _PDFs[Form("bern%d_gaussian", order)].get();
 
         // Make Bernstein Polynomial
         RooAbsPdf* bern_pdf = makeBernsteinPoly(ObsVar, order);
 
         // Make Convolution: Bernstein Polynomial (X) Gaussian
         auto conv_name = Form("bern%d_X_gauss", order);
-        _PDFs.insert(std::pair<std::string, std::unique_ptr<RooAbsPdf>>
-                     (conv_name, std::make_unique<RooFFTConvPdf>
-                      (RooFFTConvPdf(conv_name, conv_name,
-                                     ObsVar, *bern_pdf, *gauss_pdf))
-                     )
-                    );
+        storeRooFFTConvPdf(conv_name, ObsVar, bern_pdf, gauss_pdf);
         
         std::cout << "Created Bernstein (X) Gaussian PDF with the following key: ";
         std::cout << conv_name << std::endl;
@@ -178,19 +160,13 @@ namespace RHD
     {
         // Make Gaussian
         RooAbsPdf* gauss_pdf = makeGaussian(ObsVar, Form("lau%d", order));
-        gauss_pdf = _PDFs[Form("lau%d_gaussian", order)].get();
 
         // Make Laurent Series
         RooAbsPdf* lau_pdf = makeLaurentSeries(ObsVar, order);
 
         // Make Convolution: Laurent Series (X) Gaussian
         auto conv_name = Form("lau%d_X_gauss", order);
-        _PDFs.insert(std::pair<std::string, std::unique_ptr<RooAbsPdf>>
-                     (conv_name, std::make_unique<RooFFTConvPdf>
-                      (RooFFTConvPdf(conv_name, conv_name,
-                                     ObsVar, *lau_pdf, *gauss_pdf))
-                     )
-                    );
+        storeRooFFTConvPdf(conv_name, ObsVar, lau_pdf, gauss_pdf);
 
         std::cout << "Created Laurent (X) Gaussian PDF with the following key: ";
         std::cout << conv_name << std::endl;
@@ -198,7 +174,7 @@ namespace RHD
         return _PDFs[conv_name].get();
     }
 
-    
+
     RooAbsPdf* PDFModels::makeGaussian ( RooRealVar& ObsVar,
                                          const char* prefix )
     {
@@ -291,8 +267,8 @@ namespace RHD
         double xhigh = ObsVar.getMax();
 
         storeRooRealVar("voigt_mean", xlow, xhigh);
-        storeRooRealVar("voigt_width", xlow, xhigh);
-        storeRooRealVar("voigt_sigma", xlow, xhigh);
+        storeRooRealVar("voigt_width", 1e-2, (xhigh-xlow)/2.);
+        storeRooRealVar("voigt_sigma", 1e-2, (xhigh-xlow)/2.);
         storeRooVoigtian("voigt", ObsVar,
                          _Parameters["voigt_mean"],
                          _Parameters["voigt_width"],
@@ -607,5 +583,18 @@ namespace RHD
         std::cout << "   " << formula;
         std::cout << "   and params: " << std::endl;
         param_list.Print();
+    }
+
+    void PDFModels::storeRooFFTConvPdf ( const char* key,
+                                         RooRealVar& ObsVar,
+                                          RooAbsPdf* pdf1,
+                                          RooAbsPdf* pdf2 )
+    {
+        _PDFs.insert(std::pair<std::string, std::unique_ptr<RooAbsPdf>>
+                     (key, std::make_unique<RooFFTConvPdf>
+                      (RooFFTConvPdf(key, key,
+                                     ObsVar, *pdf1, *pdf2))
+                     )
+                    );
     }
 }

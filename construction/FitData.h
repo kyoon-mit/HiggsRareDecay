@@ -146,10 +146,10 @@ namespace RHD // Rare Higgs Decay
         /* Internal variables for saving. */
                bool _SAVEOPTION;
         const char* _SAVEDIR;
-        const char* _SAVEPATHFULL;
         const char* _OUTFILENAME;
-        const char* _PLOTPATH;
         const char* _WORKSPACENAME;
+        std::string _SAVEPATHFULL;
+        std::string _PLOTPATH;
     };
 }
 
