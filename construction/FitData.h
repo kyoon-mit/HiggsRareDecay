@@ -58,29 +58,21 @@ namespace RHD // Rare Higgs Decay
                                       RooDataHist* data,
                                                int maxTries,
                                                int retry=0 );
+        template<typename T>
         RooFitResult performLikelihoodFit (   RooAbsPdf* pdf,
-                                            RooDataHist* data, // binned
+                                                      T* data,
                                                      int maxTries,
                                                      int retry=0 );
-        RooFitResult performLikelihoodFit (  RooAbsPdf* pdf,
-                                            RooDataSet* data, // unbinned
-                                                    int maxTries,
-                                                    int retry=0 );
         void performMultiChi2Fit (                const char* pdfType,
                                                   RooRealVar* ObsVar,
                                                  RooDataHist* data,
                                    const std::vector<double>& initParamValues1={},
                                    const std::vector<double>& initParamValues2={},
                                                        double fTestAlpha=0.05 );
+        template<typename T>
         void performMultiLikelihoodFit (                const char* pdfType,
                                                         RooRealVar* ObsVar,
-                                                       RooDataHist* data, // binned
-                                         const std::vector<double>& initParamValues1={},
-                                         const std::vector<double>& initParamValues2={},
-                                                             double fTestAlpha=0.05 );
-        void performMultiLikelihoodFit (                const char* pdfType,
-                                                        RooRealVar* ObsVar,
-                                                        RooDataSet* data, // unbinned
+                                                                 T* data,
                                          const std::vector<double>& initParamValues1={},
                                          const std::vector<double>& initParamValues2={},
                                                              double fTestAlpha=0.05 );
@@ -91,8 +83,9 @@ namespace RHD // Rare Higgs Decay
                                                RooDataHist* data,
                                  const std::vector<double>& initParamValues1={},
                                  const std::vector<double>& initParamValues2={} );
+        template<typename T>
         void performSignalFit ( RooRealVar* ObsVar,
-                                RooDataSet* data );
+                                         T* data );
 
         /* Evaluate fit. */
         void getGoodnessOfFit (); //
@@ -105,23 +98,15 @@ namespace RHD // Rare Higgs Decay
                              int nParamNull,
                              int nParamAlt,
                              int nData );
-        double performFTest (      double chi2,
-                                      int ndof,
-                               RooAbsPdf* pdfNull,
-                               RooAbsPdf* pdfTest,
-                              RooRealVar* mass,
-                              RooDataSet* data,
-                              std::string name );
 
         /* Plot fit. */
+        template<typename T>
         void plotPDF (  RooRealVar* ObsVar,
                          RooAbsPdf* pdf,
-                       RooDataHist* data );
-        void plotPDF ( RooRealVar* ObsVar,
-                        RooAbsPdf* pdf,
-                       RooDataSet* data );
+                                 T* data );
+        template<typename T>
         void plotMultiplePDFs (                     RooRealVar* ObsVar,
-                                                   RooDataHist* data,
+                                                             T* data,
                                                     const char* plotName,
                                 const std::vector<const char*>& pdfNames,
                                         const std::vector<int>& colorScheme );

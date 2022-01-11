@@ -270,81 +270,11 @@ namespace RHD
     }
 
 
-    RooFitResult FitData::performLikelihoodFit (   RooAbsPdf* pdf,
-                                                 RooDataHist* data,
-                                                          int maxTries,
-                                                          int retry=0 )
-    {
-        RooArgSet* params = pdf->getParameters((const RooArgSet*)(0));
-        RooFitResult* fitResult;
-        int status = 5;
-        int ntries = 0;
-        int retrycount = retry;
-        
-        std::cout << "----------- ";
-        std::cout << "Likelihood (binned) fitting " << pdf->GetTitle() << " to " << data->GetTitle();
-        std::cout << " -----------" << std::endl;
-        
-        // Try fit as many times as needed to converge
-        RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
-        while (++ntries <= maxTries) {
-            std::cout << "trial #" << ntries << std::endl;
-            fitResult = pdf->fitTo(*data,
-                                   RooFit::Save(true),
-                                   RooFit::Minimizer("Minuit2", "minimize"),
-                                   RooFit::PrintLevel(-1),
-                                   RooFit::Warnings(false),
-                                   RooFit::PrintEvalErrors(-99)
-                                  );
-            status = fitResult->status();
-            // If fit status is not 0, randomize parameters
-            if (status) {
-                params->assignValueOnly(fitResult->randomizePars());
-            } else {
-                // Retry if argument given is > 0
-                if (retrycount <= 0) {
-                    fitResult->floatParsFinal().Print("s");
-                    break;
-                } else {
-                    params->assignValueOnly(fitResult->randomizePars());
-                    retrycount--;
-                }
-            }
-        }
-
-        // Check final fit status
-        std::string message;
-        if (status == 0) {
-            message = "Likelihood fit has converged.";
-        } else if (status == 1) {
-            message = "Likelihood fit exited with status = 1: "
-                      "Covariance was made pos defined.";
-        } else if (status == 2) {
-            message = "Likelihood fit exited with status = 2: "
-                      "Hesse is invalid.";
-        } else if (status == 3) {
-            message = "Likelihood fit exited with status = 3: "
-                      "Edm is above max.";
-        } else if (status == 4) {
-            message = "Likelihood fit exited with status = 4: "
-                      "Reached call limit.";
-        } else if (status == 5) {
-            message = "Likelihood fit exited with status = 5: "
-                      "Please investigate.";
-        } else {
-            message = "Something is amiss!";
-        }
-
-        std::cout << message << std::endl;
-        std::cout << "---------------------------------------------------------\n" << std::endl;
-        return *fitResult;
-    }
-
-
+    template<typename T>
     RooFitResult FitData::performLikelihoodFit (  RooAbsPdf* pdf,
-                                                 RooDataSet* data,
+                                                          T* data,
                                                          int maxTries,
-                                                         int retry=0 )
+                                                         int retry )
     {
         RooArgSet* params = pdf->getParameters((const RooArgSet*)(0));
         RooFitResult* fitResult;
@@ -353,7 +283,7 @@ namespace RHD
         int retrycount = retry;
         
         std::cout << "----------- ";
-        std::cout << "Likelihood (unbinned) fitting " << pdf->GetTitle() << " to " << data->GetTitle();
+        std::cout << "Likelihood fitting " << pdf->GetTitle() << " to " << data->GetTitle();
         std::cout << " -----------" << std::endl;
         
         // Try fit as many times as needed to converge
@@ -533,14 +463,15 @@ namespace RHD
     }
 
 
+    template<typename T>
     void FitData::performMultiLikelihoodFit (                const char* pdfType,
                                                              RooRealVar* ObsVar,
-                                                            RooDataHist* data,
+                                                                      T* data,
                                               const std::vector<double>& initParamValues1,
                                               const std::vector<double>& initParamValues2,
                                                                   double fTestAlpha )
     /*
-     * Performs binned likelihood fit of the pdf type provided.
+     * Performs likelihood fit of the pdf type provided.
      * Scans from lowest order of pdf type to higher, until value obtained from
      * performing the F-test is greater than fTestAlpha.
      * To faciliate fitting, provide initParamValues in order of parameters in
@@ -747,10 +678,11 @@ namespace RHD
     }
 
 
+    template<typename T>
     void FitData::performSignalFit ( RooRealVar* ObsVar,
-                                     RooDataSet* data )
+                                              T* data )
     /*
-     * Performs unbinned likelihood fit to the signal data provided.
+     * Performs likelihood fit to the signal data provided.
      * Explores various pdf types for the fitting model.
      */
     {
@@ -762,8 +694,8 @@ namespace RHD
         pdfs.push_back(models.makeVoigtian(*ObsVar));
 
         for (auto const& pdf: pdfs) {
-            performLikelihoodFit(pdf, data, 100);
-            plotPDF(ObsVar, pdf, data);
+            performLikelihoodFit<T>(pdf, data, 100);
+            plotPDF<T>(ObsVar, pdf, data);
         }
 
         if (_SAVEOPTION) {
@@ -843,12 +775,19 @@ namespace RHD
         double F = ((rssNull-rssAlt)/(nParamAlt-nParamNull))/(rssAlt/(nData-nParamAlt));
         return 1 - TMath::FDistI(F, nParamAlt-nParamNull, nData-nParamAlt);
     }
+
+    /*
+    void FitData::getChi2 ( RooRealVar* ObsVar,
+                            RooAbsPdf* pdf,
+                            RooDataHist* )
+    */
     
 
     /* Plot fit. */
+    template<typename T>
     void FitData::plotPDF (  RooRealVar* ObsVar,
                               RooAbsPdf* pdf,
-                            RooDataHist* data )
+                                      T* data )
     {
         // PDF and data plot
         RooPlot* frame1 = ObsVar->frame(RooFit::Title(pdf->GetTitle()));
@@ -905,71 +844,9 @@ namespace RHD
     }
 
 
-    void FitData::plotPDF ( RooRealVar* ObsVar,
-                             RooAbsPdf* pdf,
-                            RooDataSet* data )
-    {
-        // Set binning
-        int nbins = (int)(ObsVar->getMax() - ObsVar->getMin() + .5);
-        
-        // PDF and data plot
-        RooPlot* frame1 = ObsVar->frame(RooFit::Title(pdf->GetTitle()),
-                                        RooFit::Bins(nbins));
-        data->plotOn(frame1);
-        pdf->plotOn(frame1,
-                    RooFit::LineColor(kRed),
-                    RooFit::LineStyle(kDashed),
-                    RooFit::Name("fit"));
-        pdf->paramOn(frame1, RooFit::Layout(0.72, 0.88, 0.86));
-        frame1->getAttText()->SetTextFont(43);
-        frame1->getAttText()->SetTextSize(15);
-
-        // Residuals
-        RooPlot* frame2 = ObsVar->frame(RooFit::Title("residuals"));
-        RooHist* hresid = frame1->residHist();
-        frame2->addPlotable(hresid, "P");
-
-        // Pull
-        RooPlot* frame3 = ObsVar->frame(RooFit::Title("pull"));
-        RooHist* hpull = frame1->pullHist();
-        frame3->addPlotable(hpull, "P");
-
-        // Draw on canvas
-        gStyle->SetOptStat(0);
-        TCanvas c(pdf->GetName(), pdf->GetTitle());
-        c.SetCanvasSize(1500, 2000);
-
-        TPad p1("p1", "p1", .05, .53, .95, .95);
-        TPad p2("p2", "p2", .05, .29, .95, .51);
-        TPad p3("p3", "p3", .05, .05, .95, .27);
-
-        p1.cd();
-        frame1->Draw();
-        p1.Update();
-
-        p2.cd();
-        frame2->Draw();
-        p2.Update();
-
-        p3.cd();
-        frame3->Draw();
-        p3.Update();
-
-        c.cd();
-        p1.Draw();
-        p2.Draw();
-        p3.Draw();
-        c.Update();
-
-        if (_SAVEOPTION) {
-            fs::path plot_name = fs::path(_PLOTPATH) / fs::path(Form("%s.jpg", pdf->GetName()));
-            c.SaveAs(plot_name.c_str());
-        }
-    }
-
-
+    template<typename T>
     void FitData::plotMultiplePDFs (  RooRealVar* ObsVar,
-                                     RooDataHist* data,
+                                               T* data,
                                       const char* plotName,
                                       const std::vector<const char*>& pdfNames,
                                               const std::vector<int>& colorScheme )
@@ -1039,4 +916,28 @@ namespace RHD
 
         if (!fs::exists(_PLOTPATH)) fs::create_directory(_PLOTPATH);
     }
+
+
+    // Explicit template instantiation (if necessary)
+    template RooFitResult FitData::performLikelihoodFit<RooDataSet>( RooAbsPdf*,
+                                                                     RooDataSet*,
+                                                                     int,
+                                                                     int );
+    template RooFitResult FitData::performLikelihoodFit<RooDataHist>( RooAbsPdf*,
+                                                                     RooDataHist*,
+                                                                     int,
+                                                                     int );
+    template void FitData::performMultiLikelihoodFit<RooDataSet>( const char*,
+                                                                  RooRealVar*,
+                                                                  RooDataSet*,
+                                                                  const std::vector<double>&,
+                                                                  const std::vector<double>&,
+                                                                  double );
+    template void FitData::performMultiLikelihoodFit<RooDataHist>( const char*,
+                                                                   RooRealVar*,
+                                                                   RooDataHist*,
+                                                                   const std::vector<double>&,
+                                                                   const std::vector<double>&,
+                                                                   double );
+    // TODO: finish this list
 }

@@ -36,5 +36,5 @@ void test_cat_phiW()
     RooDataSet cat_phiW_sgn = fitting.makeUnbinnedData("cat_phiW_sgn", mH, tree);
 
     // Fit to signal
-    fitting.performSignalFit(&mH, &cat_phiW_sgn);
+    fitting.performSignalFit<RooDataSet>(&mH, &cat_phiW_sgn);
 }
