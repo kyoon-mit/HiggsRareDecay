@@ -24,6 +24,7 @@
 #include "RooBernstein.h"
 #include "RooExponential.h"
 #include "RooGaussian.h"
+#include "RooVoigtian.h"
 #include "RooFFTConvPdf.h"
 #include "HiggsAnalysis/CombinedLimit/interface/HGGRooPdfs.h"
 
@@ -284,6 +285,23 @@ namespace RHD
     }
 
 
+    RooAbsPdf* PDFModels::makeVoigtian ( RooRealVar& ObsVar )
+    {
+        double xlow = ObsVar.getMin();
+        double xhigh = ObsVar.getMax();
+
+        storeRooRealVar("voigt_mean", xlow, xhigh);
+        storeRooRealVar("voigt_width", xlow, xhigh);
+        storeRooRealVar("voigt_sigma", xlow, xhigh);
+        storeRooVoigtian("voigt", ObsVar,
+                         _Parameters["voigt_mean"],
+                         _Parameters["voigt_width"],
+                         _Parameters["voigt_sigma"]);
+
+        return _PDFs["voigt"].get();
+    }
+
+
     RooAbsPdf* PDFModels::makeExponentialSeries ( RooRealVar& ObsVar,
                                                          int order )
     /*
@@ -508,6 +526,19 @@ namespace RHD
                     );
         // std::cout << "Created Gaussian PDF with the following key: ";
         // std::cout << key << std::endl;
+    }
+
+    void PDFModels::storeRooVoigtian ( const char* key,
+                                       RooRealVar& ObsVar,
+                                       RooRealVar& mean,
+                                       RooRealVar& width,
+                                       RooRealVar& sigma )
+    {
+        _PDFs.insert(std::pair<std::string, std::unique_ptr<RooAbsPdf>>
+                     (key, std::make_unique<RooVoigtian>
+                      (RooVoigtian(key, key, ObsVar, mean, width, sigma))
+                     )
+                    );
     }
 
     void PDFModels::storeRooExponential( const char* key,

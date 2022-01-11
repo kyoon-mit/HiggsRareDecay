@@ -47,7 +47,10 @@ namespace RHD // Rare Higgs Decay
         /* Make data histogram. */
         RooDataHist makeBinnedData ( const char* name,
                                      RooRealVar& ObsVar,
-                                            TH1& hist );        
+                                            TH1& hist );
+        RooDataSet makeUnbinnedData ( const char* name,
+                                      RooRealVar& ObsVar,
+                                           TTree* tree );
         void makeBlindedDataHistogram (); // TODO
 
         /* Perform fit. */
@@ -89,7 +92,7 @@ namespace RHD // Rare Higgs Decay
                                  const std::vector<double>& initParamValues1={},
                                  const std::vector<double>& initParamValues2={} );
         void performSignalFit ( RooRealVar* ObsVar,
-                                RooDataHist* data );
+                                RooDataSet* data );
 
         /* Evaluate fit. */
         void getGoodnessOfFit (); //
@@ -114,6 +117,9 @@ namespace RHD // Rare Higgs Decay
         void plotPDF (  RooRealVar* ObsVar,
                          RooAbsPdf* pdf,
                        RooDataHist* data );
+        void plotPDF ( RooRealVar* ObsVar,
+                        RooAbsPdf* pdf,
+                       RooDataSet* data );
         void plotMultiplePDFs (                     RooRealVar* ObsVar,
                                                    RooDataHist* data,
                                                     const char* plotName,
@@ -131,16 +137,18 @@ namespace RHD // Rare Higgs Decay
 
     private:
         /* Method to set save path. */
-        void makePath();
+        void makePaths();
         
         /* Map to store data histograms. */
         std::map<std::string, RooDataHist> _DataHistograms;
+        std::map<std::string, RooDataSet> _DataSets;
 
         /* Internal variables for saving. */
                bool _SAVEOPTION;
         const char* _SAVEDIR;
         const char* _SAVEPATHFULL;
         const char* _OUTFILENAME;
+        const char* _PLOTPATH;
         const char* _WORKSPACENAME;
     };
 }

@@ -53,11 +53,11 @@ namespace RHD
                        const char* workspaceName ) :
         _SAVEOPTION(true),
         _SAVEDIR(saveDir),
-        _SAVEPATHFULL((fs::path(saveDir)/fs::path(outfileName)).c_str()), // TODO: check
         _OUTFILENAME(outfileName),
         _WORKSPACENAME(workspaceName)
     {
-        // makePath();
+        makePaths();
+
         std::cout << "Recreating ROOT file " << _SAVEPATHFULL << std::endl;
         
         TFile* outfile = TFile::Open(_SAVEPATHFULL, "RECREATE");
@@ -73,9 +73,8 @@ namespace RHD
     {
         if (!_SAVEOPTION && saveOption) { // i.e. if setting first time
             _SAVEOPTION = true;
-            //makePath();
-            _SAVEPATHFULL = _OUTFILENAME; // TODO: check
-
+            makePaths();
+            
             if (recreate) {
                 std::cout << "Recreating ROOT file " << _SAVEPATHFULL << std::endl;
                 TFile* outfile = TFile::Open(_SAVEPATHFULL, "RECREATE");
@@ -170,6 +169,27 @@ namespace RHD
             saveFile->Close();
         }
         return _DataHistograms[name];
+    }
+
+
+    RooDataSet FitData::makeUnbinnedData ( const char* name,
+                                           RooRealVar& ObsVar,
+                                                TTree* tree )
+    /*
+     * ObsVar must be the same name as variable in the tree.
+     */
+    {
+        _DataSets.insert(std::pair<std::string, RooDataSet>
+                         (name, RooDataSet(name, name, tree, ObsVar))
+                        );
+        if (_SAVEOPTION) {
+            TFile* saveFile = TFile::Open(_SAVEPATHFULL, "UPDATE");
+            auto wspace = (RooWorkspace*) saveFile->Get(_WORKSPACENAME);
+            wspace->import(_DataSets[name]);
+            wspace->writeToFile(_SAVEPATHFULL);
+            saveFile->Close();
+        }
+        return _DataSets[name];
     }
 
     
@@ -721,10 +741,10 @@ namespace RHD
     }
 
 
-    void FitData::performSignalFit (  RooRealVar* ObsVar,
-                                     RooDataHist* data )
+    void FitData::performSignalFit ( RooRealVar* ObsVar,
+                                     RooDataSet* data )
     /*
-     * Performs binned likelihood fit to the signal data provided.
+     * Performs unbinned likelihood fit to the signal data provided.
      * Explores various pdf types for the fitting model.
      */
     {
@@ -733,6 +753,7 @@ namespace RHD
 
         pdfs.push_back(models.makeDoubleGaussian(*ObsVar));
         pdfs.push_back(models.makeTripleGaussian(*ObsVar));
+        pdfs.push_back(models.makeVoigtian(*ObsVar));
 
         for (auto const& pdf: pdfs) {
             performLikelihoodFit(pdf, data, 100);
@@ -872,9 +893,71 @@ namespace RHD
         c.Update();
 
         if (_SAVEOPTION) {
-            fs::path save_path = fs::path(_SAVEDIR) / fs::path("plots") /
-                                 fs::path(Form("%s.jpg", pdf->GetName()));
-            c.SaveAs(save_path.c_str());
+            fs::path plot_name = fs::path(_PLOTPATH) / fs::path(Form("%s.jpg", pdf->GetName()));
+            c.SaveAs(plot_name.c_str());
+        }
+    }
+
+
+    void FitData::plotPDF ( RooRealVar* ObsVar,
+                             RooAbsPdf* pdf,
+                            RooDataSet* data )
+    {
+        // Set binning
+        int nbins = (int)(ObsVar->getMax() - ObsVar->getMin() + .5);
+        
+        // PDF and data plot
+        RooPlot* frame1 = ObsVar->frame(RooFit::Title(pdf->GetTitle()),
+                                        RooFit::Bins(nbins));
+        data->plotOn(frame1);
+        pdf->plotOn(frame1,
+                    RooFit::LineColor(kRed),
+                    RooFit::LineStyle(kDashed),
+                    RooFit::Name("fit"));
+        pdf->paramOn(frame1, RooFit::Layout(0.72, 0.88, 0.86));
+        frame1->getAttText()->SetTextFont(43);
+        frame1->getAttText()->SetTextSize(15);
+
+        // Residuals
+        RooPlot* frame2 = ObsVar->frame(RooFit::Title("residuals"));
+        RooHist* hresid = frame1->residHist();
+        frame2->addPlotable(hresid, "P");
+
+        // Pull
+        RooPlot* frame3 = ObsVar->frame(RooFit::Title("pull"));
+        RooHist* hpull = frame1->pullHist();
+        frame3->addPlotable(hpull, "P");
+
+        // Draw on canvas
+        gStyle->SetOptStat(0);
+        TCanvas c(pdf->GetName(), pdf->GetTitle());
+        c.SetCanvasSize(1500, 2000);
+
+        TPad p1("p1", "p1", .05, .53, .95, .95);
+        TPad p2("p2", "p2", .05, .29, .95, .51);
+        TPad p3("p3", "p3", .05, .05, .95, .27);
+
+        p1.cd();
+        frame1->Draw();
+        p1.Update();
+
+        p2.cd();
+        frame2->Draw();
+        p2.Update();
+
+        p3.cd();
+        frame3->Draw();
+        p3.Update();
+
+        c.cd();
+        p1.Draw();
+        p2.Draw();
+        p3.Draw();
+        c.Update();
+
+        if (_SAVEOPTION) {
+            fs::path plot_name = fs::path(_PLOTPATH) / fs::path(Form("%s.jpg", pdf->GetName()));
+            c.SaveAs(plot_name.c_str());
         }
     }
 
@@ -932,21 +1015,24 @@ namespace RHD
         legend.Draw();
         c.Update();
 
-        fs::path save_path = fs::path(_SAVEDIR) / fs::path("plots") /
-                             fs::path(Form("%s.jpg", plotName));
-                                      // TODO: warning if file already exists
-        c.SaveAs(save_path.c_str());
+        if (_SAVEOPTION) {
+            fs::path plot_name = fs::path(_PLOTPATH) / fs::path(Form("%s.jpg", plotName));
+            c.SaveAs(plot_name.c_str());
+        }
     }
 
 
     /* Private methods. */
-    void FitData::makePath()
+    void FitData::makePaths ()
     {
-        if (!_SAVEPATHFULL) {
-            fs::path full_path = fs::path(_SAVEDIR) / fs::path(_OUTFILENAME);
-            std::cout << full_path << std::endl;
-            _SAVEPATHFULL = "FitData_results.root"; // TODO: full_path.c_str() doesn't work
-            // TODO: if not exist create
-        }
+        fs::path save_path = fs::canonical(fs::path(_SAVEDIR)) / fs::path(_OUTFILENAME);
+        std::string s = save_path.string();
+        _SAVEPATHFULL = s.c_str();
+
+        fs::path plot_path = fs::canonical(fs::path(_SAVEDIR)) / fs::path(_PLOTPATH);
+        std::string p = plot_path.string();
+        _PLOTPATH = p.c_str();
+
+        if (!fs::exists(_PLOTPATH)) fs::create_directory(_PLOTPATH);
     }
 }
