@@ -54,41 +54,45 @@ namespace RHD // Rare Higgs Decay
         void makeBlindedDataHistogram (); // TODO
 
         /* Perform fit. */
-        RooFitResult performChi2Fit (   RooAbsPdf* pdf,
-                                      RooDataHist* data,
+        RooFitResult performChi2Fit (   RooAbsPdf& pdf,
+                                      RooDataHist& data,
                                                int maxTries,
                                                int retry=0 );
         template<typename T>
-        RooFitResult performLikelihoodFit (   RooAbsPdf* pdf,
-                                                      T* data,
-                                                     int maxTries,
-                                                     int retry=0 );
+        RooFitResult performLikelihoodFit ( RooAbsPdf& pdf,
+                                                    T& data,
+                                                   int maxTries,
+                                                   int retry=0 );
         void performMultiChi2Fit (                const char* pdfType,
-                                                  RooRealVar* ObsVar,
-                                                 RooDataHist* data,
+                                                  RooRealVar& ObsVar,
+                                                 RooDataHist& data,
                                    const std::vector<double>& initParamValues1={},
                                    const std::vector<double>& initParamValues2={},
                                                        double fTestAlpha=0.05 );
         template<typename T>
         void performMultiLikelihoodFit (                const char* pdfType,
-                                                        RooRealVar* ObsVar,
-                                                                 T* data,
+                                                        RooRealVar& ObsVar,
+                                                                 T& data,
                                          const std::vector<double>& initParamValues1={},
                                          const std::vector<double>& initParamValues2={},
                                                              double fTestAlpha=0.05 );
         void manuallyFitParams (                const char* pdfType,
                                                         int order,
                                                 const char* plotTitle,
-                                                RooRealVar* ObsVar,
-                                               RooDataHist* data,
+                                                RooRealVar& ObsVar,
+                                               RooDataHist& data,
                                  const std::vector<double>& initParamValues1={},
                                  const std::vector<double>& initParamValues2={} );
         template<typename T>
-        void performSignalFit ( RooRealVar* ObsVar,
-                                         T* data );
+        void performSignalFit ( RooRealVar& ObsVar,
+                                         T& data );
 
         /* Evaluate fit. */
-        void getGoodnessOfFit (); //
+        template<typename T>
+        double getGoodnessOfFitBC ( RooRealVar& ObsVar,
+                                     RooAbsPdf& pdf,
+                                             T& data,
+                                           bool use_toys=false );
         double getWilksProb ( double nllNull,
                               double nllAlt,
                                  int dofNull,
@@ -101,12 +105,12 @@ namespace RHD // Rare Higgs Decay
 
         /* Plot fit. */
         template<typename T>
-        void plotPDF (  RooRealVar* ObsVar,
-                         RooAbsPdf* pdf,
-                                 T* data );
+        void plotPDF (  RooRealVar& ObsVar,
+                         RooAbsPdf& pdf,
+                                 T& data );
         template<typename T>
-        void plotMultiplePDFs (                     RooRealVar* ObsVar,
-                                                             T* data,
+        void plotMultiplePDFs (                     RooRealVar& ObsVar,
+                                                             T& data,
                                                     const char* plotName,
                                 const std::vector<const char*>& pdfNames,
                                         const std::vector<int>& colorScheme );

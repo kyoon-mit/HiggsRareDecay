@@ -9,8 +9,9 @@
 
 // --- ROOT ---
 #include "TCanvas.h"
-#include "TFile.h"
 #include "TPad.h"
+#include "TFile.h"
+#include "TF1.h"
 #include "TH1F.h"
 #include "TMath.h"
 #include "TStyle.h"
@@ -199,32 +200,32 @@ namespace RHD
     }
 
     
-    RooFitResult FitData::performChi2Fit (   RooAbsPdf* pdf,
-                                           RooDataHist* data,
+    RooFitResult FitData::performChi2Fit (   RooAbsPdf& pdf,
+                                           RooDataHist& data,
                                                     int maxTries,
                                                     int retry )
     {
-        RooArgSet* params = pdf->getParameters((const RooArgSet*)(0));
+        RooArgSet* params = pdf.getParameters((const RooArgSet*)(0));
         RooFitResult* fitResult;
         int status = 5;
         int ntries = 0;
         int retrycount = retry;
         
         std::cout << "----------- ";
-        std::cout << "Chi2 fitting " << pdf->GetTitle() << " to " << data->GetTitle();
+        std::cout << "Chi2 fitting " << pdf.GetTitle() << " to " << data.GetTitle();
         std::cout << " -----------" << std::endl;
         
         // Try fit as many times as needed to converge
         RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
         while (++ntries <= maxTries) {
             std::cout << "trial #" << ntries << std::endl;
-            fitResult = pdf->chi2FitTo(*data,
-                                       RooFit::Save(true),
-                                       RooFit::Minimizer("Minuit2", "minimize"),
-                                       RooFit::PrintLevel(-1),
-                                       RooFit::Warnings(false),
-                                       RooFit::PrintEvalErrors(-99)
-                                      );
+            fitResult = pdf.chi2FitTo(data,
+                                      RooFit::Save(true),
+                                      RooFit::Minimizer("Minuit2", "minimize"),
+                                      RooFit::PrintLevel(-1),
+                                      RooFit::Warnings(false),
+                                      RooFit::PrintEvalErrors(-99)
+                                     );
             status = fitResult->status();
             // If fit status is not 0, randomize parameters
             if (status) {
@@ -271,32 +272,32 @@ namespace RHD
 
 
     template<typename T>
-    RooFitResult FitData::performLikelihoodFit (  RooAbsPdf* pdf,
-                                                          T* data,
+    RooFitResult FitData::performLikelihoodFit (  RooAbsPdf& pdf,
+                                                          T& data,
                                                          int maxTries,
                                                          int retry )
     {
-        RooArgSet* params = pdf->getParameters((const RooArgSet*)(0));
+        RooArgSet* params = pdf.getParameters((const RooArgSet*)(0));
         RooFitResult* fitResult;
         int status = 5;
         int ntries = 0;
         int retrycount = retry;
         
         std::cout << "----------- ";
-        std::cout << "Likelihood fitting " << pdf->GetTitle() << " to " << data->GetTitle();
+        std::cout << "Likelihood fitting " << pdf.GetTitle() << " to " << data.GetTitle();
         std::cout << " -----------" << std::endl;
         
         // Try fit as many times as needed to converge
         RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
         while (++ntries <= maxTries) {
             std::cout << "trial #" << ntries << std::endl;
-            fitResult = pdf->fitTo(*data,
-                                   RooFit::Save(true),
-                                   RooFit::Minimizer("Minuit2", "minimize"),
-                                   RooFit::PrintLevel(-1),
-                                   RooFit::Warnings(false),
-                                   RooFit::PrintEvalErrors(-99)
-                                  );
+            fitResult = pdf.fitTo(data,
+                                  RooFit::Save(true),
+                                  RooFit::Minimizer("Minuit2", "minimize"),
+                                  RooFit::PrintLevel(-1),
+                                  RooFit::Warnings(false),
+                                  RooFit::PrintEvalErrors(-99)
+                                 );
             status = fitResult->status();
             // If fit status is not 0, randomize parameters
             if (status) {
@@ -343,8 +344,8 @@ namespace RHD
     
 
     void FitData::performMultiChi2Fit (                const char* pdfType,
-                                                       RooRealVar* ObsVar,
-                                                      RooDataHist* data,
+                                                       RooRealVar& ObsVar,
+                                                      RooDataHist& data,
                                         const std::vector<double>& initParamValues1,
                                         const std::vector<double>& initParamValues2,
                                                             double fTestAlpha )
@@ -379,7 +380,7 @@ namespace RHD
         
             // Make PDF according to type given
             if (std::strcmp(pdfType, "expXgauss") == 0) {
-                pdfs.push_back(models.makeExponentialConvGaussian(*ObsVar, order));
+                pdfs.push_back(models.makeExponentialConvGaussian(ObsVar, order));
                 retry = 1;
                 models.setMultiVals(Form("expsrs%d_c", order),
                                     1, std::min(order, plist1_size),
@@ -389,14 +390,14 @@ namespace RHD
                                     params2);
             
             } else if (std::strcmp(pdfType, "bernXgauss") == 0) {
-                pdfs.push_back(models.makeBernsteinConvGaussian(*ObsVar, order));
+                pdfs.push_back(models.makeBernsteinConvGaussian(ObsVar, order));
                 retry = 1;
                 models.setMultiVals(Form("bern%d_c", order),
                                     0, std::min(order, plist1_size),
                                     params1);
 
             } else if (std::strcmp(pdfType, "lauXgauss") == 0) {
-                pdfs.push_back(models.makeLaurentConvGaussian(*ObsVar, order));
+                pdfs.push_back(models.makeLaurentConvGaussian(ObsVar, order));
                 retry = 2;
                 models.setMultiVals(Form("lau%d_h", order),
                                     1, std::min(order+1, plist1_size+1),
@@ -406,7 +407,7 @@ namespace RHD
                                     params2);
                 
             } else if (std::strcmp(pdfType, "powXgauss") == 0) {
-                pdfs.push_back(models.makePowerConvGaussian(*ObsVar, order));
+                pdfs.push_back(models.makePowerConvGaussian(ObsVar, order));
                 retry = 2;
                 if (order > 1) {
                     models.setMultiVals(Form("powsrs%d_c", order),
@@ -419,7 +420,7 @@ namespace RHD
             }
 
             // Perform chi2 fit
-            RooFitResult fit = performChi2Fit(pdfs.at(order-1), data, 150, retry);
+            RooFitResult fit = performChi2Fit(*(pdfs.at(order-1)), data, 150, retry);
             nlls.push_back(fit.minNll());
             dofs.push_back(fit.covarianceMatrix().GetNcols());
 
@@ -444,7 +445,7 @@ namespace RHD
             }
             
             // Plot individual PDFs
-            plotPDF(ObsVar, pdfs.at(order-1), data);
+            plotPDF(ObsVar, *(pdfs.at(order-1)), data);
             order++;
         } // End while-loop
 
@@ -453,7 +454,7 @@ namespace RHD
             TFile* saveFile = TFile::Open(_SAVEPATHFULL.c_str(), "UPDATE");
             auto wspace = (RooWorkspace*) saveFile->Get(_WORKSPACENAME);
             for (const auto& pdf: pdfs) {
-                RooArgSet* params = (RooArgSet*) pdf->getParameters(*ObsVar);
+                RooArgSet* params = (RooArgSet*) pdf->getParameters(ObsVar);
                 wspace->import(*pdf);
                 wspace->saveSnapshot(Form("%s_chi2", pdf->GetName()), *params, true);
             }
@@ -465,8 +466,8 @@ namespace RHD
 
     template<typename T>
     void FitData::performMultiLikelihoodFit (                const char* pdfType,
-                                                             RooRealVar* ObsVar,
-                                                                      T* data,
+                                                             RooRealVar& ObsVar,
+                                                                      T& data,
                                               const std::vector<double>& initParamValues1,
                                               const std::vector<double>& initParamValues2,
                                                                   double fTestAlpha )
@@ -501,7 +502,7 @@ namespace RHD
         
             // Make PDF according to type given
             if (std::strcmp(pdfType, "expXgauss") == 0) {
-                pdfs.push_back(models.makeExponentialConvGaussian(*ObsVar, order));
+                pdfs.push_back(models.makeExponentialConvGaussian(ObsVar, order));
                 retry = 1;
                 models.setMultiVals(Form("expsrs%d_c", order),
                                     1, std::min(order, plist1_size),
@@ -511,14 +512,14 @@ namespace RHD
                                     params2);
                 
             } else if (std::strcmp(pdfType, "bernXgauss") == 0) {
-                pdfs.push_back(models.makeBernsteinConvGaussian(*ObsVar, order));
+                pdfs.push_back(models.makeBernsteinConvGaussian(ObsVar, order));
                 retry = 1;
                 models.setMultiVals(Form("bern%d_c", order),
                                     0, std::min(order, plist1_size),
                                     params1);
 
             } else if (std::strcmp(pdfType, "lauXgauss") == 0) {
-                pdfs.push_back(models.makeLaurentConvGaussian(*ObsVar, order));
+                pdfs.push_back(models.makeLaurentConvGaussian(ObsVar, order));
                 retry = 2;
                 models.setMultiVals(Form("lau%d_h", order),
                                     1, std::min(order+1, plist1_size+1),
@@ -528,7 +529,7 @@ namespace RHD
                                     params2);
                 
             } else if (std::strcmp(pdfType, "powXgauss") == 0) {
-                pdfs.push_back(models.makePowerConvGaussian(*ObsVar, order));
+                pdfs.push_back(models.makePowerConvGaussian(ObsVar, order));
                 retry = 2;
                 models.setMultiVals(Form("powsrs%d_c", order),
                                     1, std::min(order+1, plist1_size+1),
@@ -539,7 +540,7 @@ namespace RHD
             }
 
             // Perform fit
-            RooFitResult fit = performLikelihoodFit(pdfs.at(order-1), data, 150, retry);
+            RooFitResult fit = performLikelihoodFit(*(pdfs.at(order-1)), data, 150, retry);
             nlls.push_back(fit.minNll());
             dofs.push_back(fit.covarianceMatrix().GetNcols());
 
@@ -564,7 +565,7 @@ namespace RHD
             }
             
             // Plot individual PDFs
-            plotPDF(ObsVar, pdfs.at(order-1), data);
+            plotPDF(ObsVar, *(pdfs.at(order-1)), data);
             if ((std::strcmp("powXgauss", pdfType) == 0) && order >= 4) break; //
             order++;
         } // End while-loop
@@ -574,7 +575,7 @@ namespace RHD
             TFile* saveFile = TFile::Open(_SAVEPATHFULL.c_str(), "UPDATE");
             auto wspace = (RooWorkspace*) saveFile->Get(_WORKSPACENAME);
             for (const auto& pdf: pdfs) {
-                RooArgSet* params = (RooArgSet*) pdf->getParameters(*ObsVar);
+                RooArgSet* params = (RooArgSet*) pdf->getParameters(ObsVar);
                 wspace->import(*pdf);
                 wspace->saveSnapshot(Form("%s_bin_mle", pdf->GetName()), *params, true);
             }
@@ -587,8 +588,8 @@ namespace RHD
     void FitData::manuallyFitParams (  const char* pdfType,
                                        int order,
                                        const char* plotTitle,
-                                       RooRealVar* ObsVar,
-                                      RooDataHist* data,
+                                       RooRealVar& ObsVar,
+                                      RooDataHist& data,
                                       const std::vector<double>& initParamValues1,
                                       const std::vector<double>& initParamValues2 )
      /*
@@ -600,12 +601,12 @@ namespace RHD
         // Lambda function to plot
         auto lambda_plot = [this]( const char* title,
                                     RooAbsPdf* pdf,
-                                  RooDataHist* data,
-                                   RooRealVar* x )
+                                  RooDataHist& data,
+                                   RooRealVar& x )
         {
             // PDF and data plot
-            RooPlot* frame = x->frame(RooFit::Title(title));
-            data->plotOn(frame);
+            RooPlot* frame = x.frame(RooFit::Title(title));
+            data.plotOn(frame);
             pdf->plotOn(frame,
                         RooFit::LineColor(kRed),
                         RooFit::LineStyle(kDashed),
@@ -638,7 +639,7 @@ namespace RHD
         
         // Make PDF according to type given
         if (std::strcmp(pdfType, "expXgauss") == 0) {
-            auto pdf = models.makeExponentialConvGaussian(*ObsVar, order);
+            auto pdf = models.makeExponentialConvGaussian(ObsVar, order);
             models.setMultiVals(Form("expsrs%d_c", order),
                                 1, std::min(order, plist1_size),
                                 params1);
@@ -648,14 +649,14 @@ namespace RHD
             lambda_plot(plotTitle, pdf, data, ObsVar);
             
         } else if (std::strcmp(pdfType, "bernXgauss") == 0) {
-            auto pdf = models.makeBernsteinConvGaussian(*ObsVar, order);
+            auto pdf = models.makeBernsteinConvGaussian(ObsVar, order);
             models.setMultiVals(Form("bern%d_c", order),
                                 0, std::min(order, plist1_size),
                                 params1);
             lambda_plot(plotTitle, pdf, data, ObsVar);
             
         } else if (std::strcmp(pdfType, "lauXgauss") == 0) {
-            auto pdf = models.makeLaurentConvGaussian(*ObsVar, order);
+            auto pdf = models.makeLaurentConvGaussian(ObsVar, order);
             models.setMultiVals(Form("lau%d_h", order),
                                 1, std::min(order+1, plist1_size+1),
                                 params1);
@@ -665,7 +666,7 @@ namespace RHD
             lambda_plot(plotTitle, pdf, data, ObsVar);
 
         } else if (std::strcmp(pdfType, "powXgauss") == 0) {
-            auto pdf = models.makePowerConvGaussian(*ObsVar, order);
+            auto pdf = models.makePowerConvGaussian(ObsVar, order);
             models.setMultiVals(Form("powsrs%d_c", order),
                                 1, std::min(order+1, plist1_size+1),
                                 params1);
@@ -679,8 +680,8 @@ namespace RHD
 
 
     template<typename T>
-    void FitData::performSignalFit ( RooRealVar* ObsVar,
-                                              T* data )
+    void FitData::performSignalFit ( RooRealVar& ObsVar,
+                                              T& data )
     /*
      * Performs likelihood fit to the signal data provided.
      * Explores various pdf types for the fitting model.
@@ -689,20 +690,22 @@ namespace RHD
         std::vector<RooAbsPdf*> pdfs;
         auto models = PDFModels();
 
-        pdfs.push_back(models.makeDoubleGaussian(*ObsVar));
-        pdfs.push_back(models.makeTripleGaussian(*ObsVar));
-        pdfs.push_back(models.makeVoigtian(*ObsVar));
+        pdfs.push_back(models.makeDoubleGaussian(ObsVar));
+        pdfs.push_back(models.makeTripleGaussian(ObsVar));
+        pdfs.push_back(models.makeVoigtian(ObsVar));
 
         for (auto const& pdf: pdfs) {
-            performLikelihoodFit<T>(pdf, data, 100);
-            plotPDF<T>(ObsVar, pdf, data);
+            performLikelihoodFit<T>(*pdf, data, 100);
+            plotPDF<T>(ObsVar, *pdf, data);
+            double prob_GoF = getGoodnessOfFitBC<T>(ObsVar, *pdf, data);
+            std::cout << "Goodness of fit: " << prob_GoF << std::endl;
         }
 
         if (_SAVEOPTION) {
             TFile* saveFile = TFile::Open(_SAVEPATHFULL.c_str(), "UPDATE");
             auto wspace = (RooWorkspace*) saveFile->Get(_WORKSPACENAME);
             for (const auto& pdf: pdfs) {
-                RooArgSet* params = (RooArgSet*) pdf->getParameters(*ObsVar);
+                RooArgSet* params = (RooArgSet*) pdf->getParameters(ObsVar);
                 wspace->import(*pdf);
                 wspace->saveSnapshot(Form("%s_bin_mle", pdf->GetName()), *params, true);
             }
@@ -713,6 +716,53 @@ namespace RHD
 
     
     /* Evaluate fit.*/
+    template<typename T>
+    double FitData::getGoodnessOfFitBC ( RooRealVar& ObsVar,
+                                          RooAbsPdf& pdf,
+                                                  T& data,
+                                                bool use_toys )
+    /*
+     * Calculates goodness-of-fit probability using Baker and Cousins'
+     * test statistic which is based on the lkielihood ratio with respect to
+     * the saturated model.
+     * See https://twiki.cern.ch/twiki/bin/viewauth/CMS/StatComGOF
+     */
+    {
+        // Convert RooAbsPdf to TF1
+        RooArgSet* obs = pdf.getObservables(ObsVar);
+        RooArgSet* params = pdf.getParameters(data);
+        TF1* fit = pdf.asTF(*obs, *params, *obs);
+        
+        // Create TH1 from data (which is either RooDataHist or RooDataSet)        
+        TH1* hist = data.createHistogram(data.GetName(),
+                                         ObsVar,
+                                         Binning(ObsVar.getBinning()));
+
+        // Get Baker-Cousins test statistic
+        double BC_t = hist->Chisquare(fit, "L");
+
+        // Get asymptotic probability
+        double asym_prob = TMath::Prob(BC_t, params->getSize());
+
+        // Get Monte Carlo probability
+        if (use_toys) {
+            int ntrials = 1000;
+            int trial = 0;
+            int ndata = data.sumEntries();
+            TRandom3 Generator;
+            while (trial++ <= ntrials) {
+                int nevents = Generator.Poisson(ndata);
+                RooDataHist* binned_toy = pdf.generateBinned(*obs, nevents, false, true);
+                TH1* htoy = binned_toy->createHistogram("htoy",
+                                                        ObsVar,
+                                                        Binning(ObsVar.getBinning()));
+                auto r = htoy->Fit(fit, "Q L S");
+            }
+        }
+
+        return asym_prob;
+    }
+    
     double FitData::getWilksProb ( double nllNull,
                                    double nllAlt,
                                       int dofNull,
@@ -785,34 +835,34 @@ namespace RHD
 
     /* Plot fit. */
     template<typename T>
-    void FitData::plotPDF (  RooRealVar* ObsVar,
-                              RooAbsPdf* pdf,
-                                      T* data )
+    void FitData::plotPDF ( RooRealVar& ObsVar,
+                             RooAbsPdf& pdf,
+                                     T& data )
     {
         // PDF and data plot
-        RooPlot* frame1 = ObsVar->frame(RooFit::Title(pdf->GetTitle()));
-        data->plotOn(frame1);
-        pdf->plotOn(frame1,
-                    RooFit::LineColor(kRed),
-                    RooFit::LineStyle(kDashed),
-                    RooFit::Name("fit"));
-        pdf->paramOn(frame1, RooFit::Layout(0.72, 0.88, 0.86));
+        RooPlot* frame1 = ObsVar.frame(RooFit::Title(pdf.GetTitle()));
+        data.plotOn(frame1);
+        pdf.plotOn(frame1,
+                   RooFit::LineColor(kRed),
+                   RooFit::LineStyle(kDashed),
+                   RooFit::Name("fit"));
+        pdf.paramOn(frame1, RooFit::Layout(0.72, 0.88, 0.86));
         frame1->getAttText()->SetTextFont(43);
         frame1->getAttText()->SetTextSize(15);
 
         // Residuals
-        RooPlot* frame2 = ObsVar->frame(RooFit::Title("residuals"));
+        RooPlot* frame2 = ObsVar.frame(RooFit::Title("residuals"));
         RooHist* hresid = frame1->residHist();
         frame2->addPlotable(hresid, "P");
 
         // Pull
-        RooPlot* frame3 = ObsVar->frame(RooFit::Title("pull"));
+        RooPlot* frame3 = ObsVar.frame(RooFit::Title("pull"));
         RooHist* hpull = frame1->pullHist();
         frame3->addPlotable(hpull, "P");
 
         // Draw on canvas
         gStyle->SetOptStat(0);
-        TCanvas c(pdf->GetName(), pdf->GetTitle());
+        TCanvas c(pdf.GetName(), pdf.GetTitle());
         c.SetCanvasSize(1500, 2000);
 
         TPad p1("p1", "p1", .05, .53, .95, .95);
@@ -838,15 +888,15 @@ namespace RHD
         c.Update();
 
         if (_SAVEOPTION) {
-            fs::path plot_name = fs::path(_PLOTPATH) / fs::path(Form("%s.jpg", pdf->GetName()));
+            fs::path plot_name = fs::path(_PLOTPATH) / fs::path(Form("%s.jpg", pdf.GetName()));
             c.SaveAs(plot_name.c_str());
         }
     }
 
 
     template<typename T>
-    void FitData::plotMultiplePDFs (  RooRealVar* ObsVar,
-                                               T* data,
+    void FitData::plotMultiplePDFs (  RooRealVar& ObsVar,
+                                               T& data,
                                       const char* plotName,
                                       const std::vector<const char*>& pdfNames,
                                               const std::vector<int>& colorScheme )
@@ -864,7 +914,7 @@ namespace RHD
         
         // PDF and data plot
         TCanvas c;
-        RooPlot* frame = ObsVar->frame(RooFit::Title(plotName));
+        RooPlot* frame = ObsVar.frame(RooFit::Title(plotName));
         data->plotOn(frame);
 
         // Check if pdfNames and colorScheme have same size
@@ -919,23 +969,23 @@ namespace RHD
 
 
     // Explicit template instantiation (if necessary)
-    template RooFitResult FitData::performLikelihoodFit<RooDataSet>( RooAbsPdf*,
-                                                                     RooDataSet*,
+    template RooFitResult FitData::performLikelihoodFit<RooDataSet>( RooAbsPdf&,
+                                                                     RooDataSet&,
                                                                      int,
                                                                      int );
-    template RooFitResult FitData::performLikelihoodFit<RooDataHist>( RooAbsPdf*,
-                                                                     RooDataHist*,
-                                                                     int,
-                                                                     int );
+    template RooFitResult FitData::performLikelihoodFit<RooDataHist>( RooAbsPdf&,
+                                                                      RooDataHist&,
+                                                                      int,
+                                                                      int );
     template void FitData::performMultiLikelihoodFit<RooDataSet>( const char*,
-                                                                  RooRealVar*,
-                                                                  RooDataSet*,
+                                                                  RooRealVar&,
+                                                                  RooDataSet&,
                                                                   const std::vector<double>&,
                                                                   const std::vector<double>&,
                                                                   double );
     template void FitData::performMultiLikelihoodFit<RooDataHist>( const char*,
-                                                                   RooRealVar*,
-                                                                   RooDataHist*,
+                                                                   RooRealVar&,
+                                                                   RooDataHist&,
                                                                    const std::vector<double>&,
                                                                    const std::vector<double>&,
                                                                    double );
