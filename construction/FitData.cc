@@ -745,7 +745,7 @@ namespace RHD
         }
         vars_list.push_back(vars_str);
         for (auto const& var: vars_list) {
-            const char* var_c = var.c_str()
+            const char* var_c = var.c_str();
             fit->SetParameter(var_c, params->getRealValue(var_c));
             std::cout << var << " : " << fit->GetParameter(var_c) << std::endl;
         }

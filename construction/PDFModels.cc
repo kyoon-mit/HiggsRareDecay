@@ -96,7 +96,8 @@ namespace RHD
 
 
     RooAbsPdf* PDFModels::makeExponentialConvGaussian ( RooRealVar& ObsVar,
-                                                                int order )
+                                                                int order,
+                                                               bool extend )
     {
         // Make Gaussian
         RooAbsPdf* gauss_pdf = makeGaussian(ObsVar, Form("expsrs%d", order));
@@ -111,12 +112,23 @@ namespace RHD
         std::cout << " Created Exponential (X) Gaussian PDF with the following key: ";
         std::cout << conv_name << std::endl;
 
-        return _PDFs[conv_name].get();
+        if (extend) {
+            auto extend_name = Form("%s_extend", conv_name);
+            auto norm_name = Form("%s_norm", extend_name);
+            storeRooRealVar(norm_name, 0., 1e+38);
+            auto extend_pdf = new RooExtendPdf(extend_name, extend_name,
+                                        *_PDFs[conv_name].get(),
+                                        _Parameters[norm_name]);
+            return extend_pdf;
+        } else {
+            return _PDFs[conv_name].get();
+        }
     }
 
 
     RooAbsPdf* PDFModels::makePowerConvGaussian ( RooRealVar& ObsVar,
-                                                          int order )
+                                                          int order,
+                                                         bool extend )
     {
         // Make Gaussian
         RooAbsPdf* gauss_pdf = makeGaussian(ObsVar, Form("powsrs%d", order));
@@ -131,12 +143,23 @@ namespace RHD
         std::cout << "Created Power (X) Gaussian PDF with the following key: ";
         std::cout << conv_name << std::endl;
 
-        return _PDFs[conv_name].get();
+        if (extend) {
+            auto extend_name = Form("%s_extend", conv_name);
+            auto norm_name = Form("%s_norm", extend_name);
+            storeRooRealVar(norm_name, 0., 1e+38);
+            auto extend_pdf = new RooExtendPdf(extend_name, extend_name,
+                                               *_PDFs[conv_name].get(),
+                                               _Parameters[norm_name]);
+            return extend_pdf;
+        } else {
+            return _PDFs[conv_name].get();
+        }
     }
     
     
     RooAbsPdf* PDFModels::makeBernsteinConvGaussian ( RooRealVar& ObsVar,
-                                                              int order )
+                                                              int order,
+                                                             bool extend )
     {
         // Make Gaussian
         RooAbsPdf* gauss_pdf = makeGaussian(ObsVar, Form("bern%d", order));
@@ -150,13 +173,24 @@ namespace RHD
         
         std::cout << "Created Bernstein (X) Gaussian PDF with the following key: ";
         std::cout << conv_name << std::endl;
-        
-        return _PDFs[conv_name].get();
+
+        if (extend) {
+            auto extend_name = Form("%s_extend", conv_name);
+            auto norm_name = Form("%s_norm", extend_name);
+            storeRooRealVar(norm_name, 0., 1e+38);
+            auto extend_pdf = new RooExtendPdf(extend_name, extend_name,
+                                               *_PDFs[conv_name].get(),
+                                               _Parameters[norm_name]);
+            return extend_pdf;
+        } else {
+            return _PDFs[conv_name].get();
+        }
     }   
 
         
     RooAbsPdf* PDFModels::makeLaurentConvGaussian ( RooRealVar& ObsVar,
-                                                            int order )
+                                                            int order,
+                                                           bool extend )
     {
         // Make Gaussian
         RooAbsPdf* gauss_pdf = makeGaussian(ObsVar, Form("lau%d", order));
@@ -171,7 +205,17 @@ namespace RHD
         std::cout << "Created Laurent (X) Gaussian PDF with the following key: ";
         std::cout << conv_name << std::endl;
 
-        return _PDFs[conv_name].get();
+        if (extend) {
+            auto extend_name = Form("%s_extend", conv_name);
+            auto norm_name = Form("%s_norm", extend_name);
+            storeRooRealVar(norm_name, 0., 1e+38);
+            auto extend_pdf = new RooExtendPdf(extend_name, extend_name,
+                                               *_PDFs[conv_name].get(),
+                                               _Parameters[norm_name]);
+            return extend_pdf;
+        } else {
+            return _PDFs[conv_name].get();
+        }
     }
 
 
@@ -191,7 +235,7 @@ namespace RHD
     }
 
 
-    RooAbsPdf* PDFModels::makeDoubleGaussian ( RooRealVar& ObsVar )
+    RooAbsPdf* PDFModels::makeDoubleGaussian ( RooRealVar& ObsVar, bool extend )
     {
         double xlow = ObsVar.getMin();
         double xhigh = ObsVar.getMax();
@@ -218,11 +262,21 @@ namespace RHD
         RooAddPdf* pdf = new RooAddPdf("digauss", "digauss",
                                        _RooArgLists["digauss_pdfs"],
                                        _RooArgLists["digauss_coeffs"]);
-        return pdf;
+        
+        if (extend) {
+            auto extend_name = "digauss_extend";
+            auto norm_name = Form("%s_norm", extend_name);
+            storeRooRealVar(norm_name, 0., 1e+38);
+            auto extend_pdf = new RooExtendPdf(extend_name, extend_name, *pdf,
+                                               _Parameters[norm_name]);
+            return extend_pdf;
+        } else {
+            return pdf;
+        }
     }
     
 
-    RooAbsPdf* PDFModels::makeTripleGaussian ( RooRealVar& ObsVar )
+    RooAbsPdf* PDFModels::makeTripleGaussian ( RooRealVar& ObsVar, bool extend )
     {
         double xlow = ObsVar.getMin();
         double xhigh = ObsVar.getMax();
@@ -257,11 +311,21 @@ namespace RHD
         RooAddPdf* pdf = new RooAddPdf("trigauss", "trigauss",
                                        _RooArgLists["trigauss_pdfs"],
                                        _RooArgLists["trigauss_coeffs"]);
-        return pdf;
+        
+        if (extend) {
+            auto extend_name = "trigauss_extend";
+            auto norm_name = Form("%s_norm", extend_name);
+            storeRooRealVar(norm_name, 0., 1e+38);
+            auto extend_pdf = new RooExtendPdf(extend_name, extend_name, *pdf,
+                                               _Parameters[norm_name]);
+            return extend_pdf;
+        } else {
+            return pdf;
+        }
     }
 
 
-    RooAbsPdf* PDFModels::makeVoigtian ( RooRealVar& ObsVar )
+    RooAbsPdf* PDFModels::makeVoigtian ( RooRealVar& ObsVar, bool extend )
     {
         double xlow = ObsVar.getMin();
         double xhigh = ObsVar.getMax();
@@ -274,7 +338,17 @@ namespace RHD
                          _Parameters["voigt_width"],
                          _Parameters["voigt_sigma"]);
 
-        return _PDFs["voigt"].get();
+        if (extend) {
+            auto extend_name = "voigt_extend";
+            auto norm_name = Form("%s_norm", extend_name);
+            storeRooRealVar(norm_name, 0., 1e+38);
+            auto extend_pdf = new RooExtendPdf(extend_name, extend_name,
+                                               *_PDFs["voigt"].get(),
+                                               _Parameters[norm_name]);
+            return extend_pdf;
+        } else {
+            return _PDFs["voigt"].get();
+        }
     }
 
 
@@ -588,7 +662,7 @@ namespace RHD
     void PDFModels::storeRooFFTConvPdf ( const char* key,
                                          RooRealVar& ObsVar,
                                           RooAbsPdf* pdf1,
-                                          RooAbsPdf* pdf2 )
+                                          RooAbsPdf* pdf2)
     {
         _PDFs.insert(std::pair<std::string, std::unique_ptr<RooAbsPdf>>
                      (key, std::make_unique<RooFFTConvPdf>
