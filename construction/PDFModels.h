@@ -43,16 +43,24 @@ namespace RHD // Rare Higgs Decay
                             std::vector<double>& values );
 
         /* Make convolutions with Gaussian. */
-        RooAbsPdf* makeExponentialConvGaussian ( RooRealVar& ObsVar, int order );
-        RooAbsPdf* makePowerConvGaussian ( RooRealVar& ObsVar, int order );
-        RooAbsPdf* makeBernsteinConvGaussian ( RooRealVar& ObsVar, int order );
-        RooAbsPdf* makeLaurentConvGaussian ( RooRealVar& ObsVar, int order );
+        RooAbsPdf* makeExponentialConvGaussian ( RooRealVar& ObsVar,
+                                                         int order,
+                                                        bool extend=false );
+        RooAbsPdf* makePowerConvGaussian ( RooRealVar& ObsVar,
+                                                   int order,
+                                                  bool extend=false );
+        RooAbsPdf* makeBernsteinConvGaussian ( RooRealVar& ObsVar,
+                                                       int order,
+                                                      bool extend=false );
+        RooAbsPdf* makeLaurentConvGaussian ( RooRealVar& ObsVar,
+                                                     int order,
+                                                    bool extend=false );
         
         /* Create signal PDFs. */
         RooAbsPdf* makeGaussian ( RooRealVar& ObsVar, const char* prefix );
-        RooAbsPdf* makeDoubleGaussian ( RooRealVar& ObsVar );
-        RooAbsPdf* makeTripleGaussian ( RooRealVar& ObsVar );
-        RooAbsPdf* makeVoigtian ( RooRealVar& ObsVar );
+        RooAbsPdf* makeDoubleGaussian ( RooRealVar& ObsVar, bool extend=false );
+        RooAbsPdf* makeTripleGaussian ( RooRealVar& ObsVar, bool extend=false );
+        RooAbsPdf* makeVoigtian ( RooRealVar& ObsVar, bool extend=false );
 
         /* Create falling spectrum PDFs. Make sure to delete. */
         RooAbsPdf* makeExponentialSeries ( RooRealVar& ObsVar, int order );

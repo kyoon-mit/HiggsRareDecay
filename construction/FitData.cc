@@ -502,7 +502,7 @@ namespace RHD
         
             // Make PDF according to type given
             if (std::strcmp(pdfType, "expXgauss") == 0) {
-                pdfs.push_back(models.makeExponentialConvGaussian(ObsVar, order));
+                pdfs.push_back(models.makeExponentialConvGaussian(ObsVar, order, true));
                 retry = 1;
                 models.setMultiVals(Form("expsrs%d_c", order),
                                     1, std::min(order, plist1_size),
@@ -566,7 +566,7 @@ namespace RHD
             
             // Plot individual PDFs
             plotPDF(ObsVar, *(pdfs.at(order-1)), data);
-            if ((std::strcmp("powXgauss", pdfType) == 0) && order >= 4) break; //
+            if (order > 10) break; //
             order++;
         } // End while-loop
 
@@ -690,12 +690,12 @@ namespace RHD
         std::vector<RooAbsPdf*> pdfs;
         auto models = PDFModels();
 
-        pdfs.push_back(models.makeDoubleGaussian(ObsVar));
-        pdfs.push_back(models.makeTripleGaussian(ObsVar));
-        pdfs.push_back(models.makeVoigtian(ObsVar));
+        pdfs.push_back(models.makeDoubleGaussian(ObsVar, true));
+        pdfs.push_back(models.makeTripleGaussian(ObsVar, true));
+        pdfs.push_back(models.makeVoigtian(ObsVar, true));
 
         for (auto const& pdf: pdfs) {
-            performLikelihoodFit<T>(*pdf, data, 100);
+            performLikelihoodFit<T>(*pdf, data, 10);
             plotPDF<T>(ObsVar, *pdf, data);
             double prob_GoF = getGoodnessOfFitBC<T>(ObsVar, *pdf, data);
             std::cout << "Goodness of fit: " << prob_GoF << std::endl;
@@ -729,48 +729,75 @@ namespace RHD
      */
     {
         // Convert RooAbsPdf to TF1
-        RooArgSet* obs = pdf.getObservables(ObsVar);
+        RooArgSet* obs = pdf.getObservables(data);
+        obs->Print();
         RooArgSet* params = pdf.getParameters(data);
-        TF1* fit = pdf.asTF(*obs, *params, *obs);
+        TF1* fit = pdf.asTF(*obs, *params, ObsVar);
 
         // Set TF1 parameter values
+        /*
         std::string vars_str =  params->contentsString();
         std::vector<std::string> vars_list;
         size_t pos = 0;
         std::string token;
+        
         while ((pos = vars_str.find(",")) != std::string::npos) {
             token = vars_str.substr(0, pos);
             vars_list.push_back(token);
             vars_str.erase(0, pos + 1);
         }
         vars_list.push_back(vars_str);
+        
         for (auto const& var: vars_list) {
             const char* var_c = var.c_str();
-            fit->SetParameter(var_c, params->getRealValue(var_c));
+            // fit->SetParameter(var_c, params->getRealValue(var_c));
             std::cout << var << " : " << fit->GetParameter(var_c) << std::endl;
         }
-        //params->createIterator();
-        //for (auto it = params->begin(); it != params->end(); ++it) {
-        //    std::cout << it.GetName() << " : " << it.getValV() << std::endl;
-        //}
+        */
         
-        // Create TH1 from data (which is either RooDataHist or RooDataSet)        
+        
+        // Create TH1 from data (which is either RooDataHist or RooDataSet)
+        
         TH1* hist = data.createHistogram(data.GetName(),
                                          ObsVar,
                                          Binning(ObsVar.getBinning()));
 
+        // Iterate over bins and add to Baker-Cousins test statistic
+        double BC_ts = 0.;
+        
+        int nbins = hist->GetXaxis()->GetNbins();
+        double N_expected = pdf.expectedEvents(ObsVar);
+        
+        for (int bin=1; bin <= nbins; bin++) {
+            double bin_content = hist->GetBinContent(bin);
+            double bin_center = hist->GetXaxis()->GetBinCenter(bin);
+            double bin_width = hist->GetXaxis()->GetBinWidth(bin);
+
+            if (bin_content > 0) {
+                std::cout << "BinContent: " << hist->GetBinContent(bin) << std::endl;
+                auto range_name = Form("r_b%d", bin);
+                ObsVar.setRange(range_name,
+                                bin_center-bin_width/2.,
+                                bin_center+bin_width/2.);
+                std::cout << N_expected*pdf.createIntegral(ObsVar, RooFit::NormSet(*obs), RooFit::Range(range_name))->getVal() << std::endl;
+            }
+        }
+        
         // Get Baker-Cousins test statistic
-        double BC_t = hist->Chisquare(fit, "L");
+        // double BC_t = hist->Chisquare(fit, "L");
 
         // Get asymptotic probability
-        double asym_prob = TMath::Prob(BC_t, hist->GetNbinsX() - params->getSize());
+        //  double asym_prob = TMath::Prob(BC_t, hist->GetNbinsX() - params->getSize());
+        double asym_prob = 1;
 
         // Plot for sanity
-        TCanvas c;
-        hist->Draw();
-        fit->Draw("SAME C");
-        fs::path plot_name = fs::path(_PLOTPATH) / fs::path(Form("GoF_%s.jpg", pdf.GetName()));
-        c.SaveAs(plot_name.c_str());
+        if (_SAVEOPTION) {
+            TCanvas c("c", "c", 1200, 800);
+            hist->Draw();
+            //fit->Draw(); //"SAME C");
+            fs::path plot_name = fs::path(_PLOTPATH) / fs::path(Form("GoF_%s.jpg", pdf.GetName()));
+            c.SaveAs(plot_name.c_str());
+        }
 
         // Get Monte Carlo probability
         if (use_toys) {
@@ -785,6 +812,7 @@ namespace RHD
                                                         ObsVar,
                                                         Binning(ObsVar.getBinning()));
                 auto r = htoy->Fit(fit, "Q L S");
+                delete binned_toy;
             }
         }
         
