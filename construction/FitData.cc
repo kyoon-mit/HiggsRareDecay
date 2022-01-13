@@ -732,6 +732,27 @@ namespace RHD
         RooArgSet* obs = pdf.getObservables(ObsVar);
         RooArgSet* params = pdf.getParameters(data);
         TF1* fit = pdf.asTF(*obs, *params, *obs);
+
+        // Set TF1 parameter values
+        std::string vars_str =  params->contentsString();
+        std::vector<std::string> vars_list;
+        size_t pos = 0;
+        std::string token;
+        while ((pos = vars_str.find(",")) != std::string::npos) {
+            token = vars_str.substr(0, pos);
+            vars_list.push_back(token);
+            vars_str.erase(0, pos + 1);
+        }
+        vars_list.push_back(vars_str);
+        for (auto const& var: vars_list) {
+            const char* var_c = var.c_str()
+            fit->SetParameter(var_c, params->getRealValue(var_c));
+            std::cout << var << " : " << fit->GetParameter(var_c) << std::endl;
+        }
+        //params->createIterator();
+        //for (auto it = params->begin(); it != params->end(); ++it) {
+        //    std::cout << it.GetName() << " : " << it.getValV() << std::endl;
+        //}
         
         // Create TH1 from data (which is either RooDataHist or RooDataSet)        
         TH1* hist = data.createHistogram(data.GetName(),
@@ -742,7 +763,14 @@ namespace RHD
         double BC_t = hist->Chisquare(fit, "L");
 
         // Get asymptotic probability
-        double asym_prob = TMath::Prob(BC_t, params->getSize());
+        double asym_prob = TMath::Prob(BC_t, hist->GetNbinsX() - params->getSize());
+
+        // Plot for sanity
+        TCanvas c;
+        hist->Draw();
+        fit->Draw("SAME C");
+        fs::path plot_name = fs::path(_PLOTPATH) / fs::path(Form("GoF_%s.jpg", pdf.GetName()));
+        c.SaveAs(plot_name.c_str());
 
         // Get Monte Carlo probability
         if (use_toys) {
@@ -759,7 +787,7 @@ namespace RHD
                 auto r = htoy->Fit(fit, "Q L S");
             }
         }
-
+        
         return asym_prob;
     }
     
