@@ -93,6 +93,10 @@ namespace RHD // Rare Higgs Decay
                                      RooAbsPdf& pdf,
                                              T& data,
                                            bool use_toys=false );
+        template<typename T>
+        std::vector<double> getBCTestResult ( RooRealVar& ObsVar,
+                                               RooAbsPdf& pdf,
+                                                       T& data );
         double getWilksProb ( double nllNull,
                               double nllAlt,
                                  int dofNull,
