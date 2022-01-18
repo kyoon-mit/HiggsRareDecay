@@ -51,6 +51,10 @@ namespace RHD // Rare Higgs Decay
         RooDataSet makeUnbinnedData ( const char* name,
                                       RooRealVar& ObsVar,
                                            TTree* tree );
+        void saveToyData ( const char* signalName,
+                           const char* backgroundName,
+                                double signalRate,
+                                double backgroundRate );
         void makeBlindedDataHistogram (); // TODO
 
         /* Perform fit. */

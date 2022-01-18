@@ -199,6 +199,13 @@ namespace RHD
         return _DataSets[name];
     }
 
+
+    void FitData::saveToyData ( const char* signalName,
+                                const char* backgroundName,
+                                     double signalRate,
+                                     double backgroundRate )
+    {}
+
     
     RooFitResult FitData::performChi2Fit (   RooAbsPdf& pdf,
                                            RooDataHist& data,
@@ -502,7 +509,7 @@ namespace RHD
         
             // Make PDF according to type given
             if (std::strcmp(pdfType, "expXgauss") == 0) {
-                pdfs.push_back(models.makeExponentialConvGaussian(ObsVar, order));//, true));
+                pdfs.push_back(models.makeExponentialConvGaussian(ObsVar, order));
                 retry = 1;
                 models.setMultiVals(Form("expsrs%d_c", order),
                                     1, std::min(order, plist1_size),
@@ -512,14 +519,14 @@ namespace RHD
                                     params2);
                 
             } else if (std::strcmp(pdfType, "bernXgauss") == 0) {
-                pdfs.push_back(models.makeBernsteinConvGaussian(ObsVar, order));//, true));
+                pdfs.push_back(models.makeBernsteinConvGaussian(ObsVar, order));
                 retry = 1;
                 models.setMultiVals(Form("bern%d_c", order),
                                     0, std::min(order, plist1_size),
                                     params1);
 
             } else if (std::strcmp(pdfType, "lauXgauss") == 0) {
-                pdfs.push_back(models.makeLaurentConvGaussian(ObsVar, order));//, true));
+                pdfs.push_back(models.makeLaurentConvGaussian(ObsVar, order));
                 retry = 2;
                 models.setMultiVals(Form("lau%d_h", order),
                                     1, std::min(order+1, plist1_size+1),
@@ -529,7 +536,7 @@ namespace RHD
                                     params2);
                 
             } else if (std::strcmp(pdfType, "powXgauss") == 0) {
-                pdfs.push_back(models.makePowerConvGaussian(ObsVar, order));//, true));
+                pdfs.push_back(models.makePowerConvGaussian(ObsVar, order));
                 retry = 2;
                 models.setMultiVals(Form("powsrs%d_c", order),
                                     1, std::min(order+1, plist1_size+1),
@@ -692,13 +699,13 @@ namespace RHD
         std::vector<RooAbsPdf*> pdfs;
         auto models = PDFModels();
 
-        pdfs.push_back(models.makeDoubleGaussian(ObsVar, true));
-        pdfs.push_back(models.makeTripleGaussian(ObsVar, true));
-        pdfs.push_back(models.makeVoigtian(ObsVar, true));
+        pdfs.push_back(models.makeDoubleGaussian(ObsVar));
+        pdfs.push_back(models.makeTripleGaussian(ObsVar));
+        pdfs.push_back(models.makeVoigtian(ObsVar));
 
-        models.setVal("digauss_mu1", 124.8, true);
-        models.setVal("trigauss_mu1", 124.8, true);
-        models.setVal("voigt_mean", 124.8, true);
+        models.setVal("digauss_mu1", 125, true);
+        models.setVal("trigauss_mu1", 125, true);
+        models.setVal("voigt_mean", 125, true);
 
         for (auto const& pdf: pdfs) {
             performLikelihoodFit<T>(*pdf, data, 10);
