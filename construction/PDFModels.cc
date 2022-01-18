@@ -61,13 +61,15 @@ namespace RHD
     //     }
     // }
     void PDFModels::setVal( const std::string& paramKey,
-                                        double value )
+                                        double value,
+                                          bool setConst )
     {
         if (!_Parameters.count(paramKey)) {
             std::cout << "RHD::PDFModels::setVal --- ";
             std::cout << "key \"" << paramKey << "\" not found." << std::endl;
         } else {
             _Parameters.at(paramKey).setVal(value);
+            if (setConst) _Parameters.at(paramKey).setConstant(true);
         }
     }
 

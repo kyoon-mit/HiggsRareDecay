@@ -502,7 +502,7 @@ namespace RHD
         
             // Make PDF according to type given
             if (std::strcmp(pdfType, "expXgauss") == 0) {
-                pdfs.push_back(models.makeExponentialConvGaussian(ObsVar, order, true));
+                pdfs.push_back(models.makeExponentialConvGaussian(ObsVar, order));//, true));
                 retry = 1;
                 models.setMultiVals(Form("expsrs%d_c", order),
                                     1, std::min(order, plist1_size),
@@ -512,14 +512,14 @@ namespace RHD
                                     params2);
                 
             } else if (std::strcmp(pdfType, "bernXgauss") == 0) {
-                pdfs.push_back(models.makeBernsteinConvGaussian(ObsVar, order));
+                pdfs.push_back(models.makeBernsteinConvGaussian(ObsVar, order));//, true));
                 retry = 1;
                 models.setMultiVals(Form("bern%d_c", order),
                                     0, std::min(order, plist1_size),
                                     params1);
 
             } else if (std::strcmp(pdfType, "lauXgauss") == 0) {
-                pdfs.push_back(models.makeLaurentConvGaussian(ObsVar, order));
+                pdfs.push_back(models.makeLaurentConvGaussian(ObsVar, order));//, true));
                 retry = 2;
                 models.setMultiVals(Form("lau%d_h", order),
                                     1, std::min(order+1, plist1_size+1),
@@ -529,7 +529,7 @@ namespace RHD
                                     params2);
                 
             } else if (std::strcmp(pdfType, "powXgauss") == 0) {
-                pdfs.push_back(models.makePowerConvGaussian(ObsVar, order));
+                pdfs.push_back(models.makePowerConvGaussian(ObsVar, order));//, true));
                 retry = 2;
                 models.setMultiVals(Form("powsrs%d_c", order),
                                     1, std::min(order+1, plist1_size+1),
@@ -566,7 +566,7 @@ namespace RHD
             
             // Plot individual PDFs
             plotPDF(ObsVar, *(pdfs.at(order-1)), data);
-            if (order > 10) break; //
+            if (order >= 10) break; //
             order++;
         } // End while-loop
 
@@ -585,6 +585,7 @@ namespace RHD
     }
 
 
+    // TODO
     void FitData::manuallyFitParams (  const char* pdfType,
                                        int order,
                                        const char* plotTitle,
@@ -681,7 +682,8 @@ namespace RHD
 
     template<typename T>
     void FitData::performSignalFit ( RooRealVar& ObsVar,
-                                              T& data )
+                                              T& data,
+                                            bool use_toys )
     /*
      * Performs likelihood fit to the signal data provided.
      * Explores various pdf types for the fitting model.
@@ -694,10 +696,14 @@ namespace RHD
         pdfs.push_back(models.makeTripleGaussian(ObsVar, true));
         pdfs.push_back(models.makeVoigtian(ObsVar, true));
 
+        models.setVal("digauss_mu1", 124.8, true);
+        models.setVal("trigauss_mu1", 124.8, true);
+        models.setVal("voigt_mean", 124.8, true);
+
         for (auto const& pdf: pdfs) {
             performLikelihoodFit<T>(*pdf, data, 10);
             plotPDF<T>(ObsVar, *pdf, data);
-            double prob_GoF = getGoodnessOfFitBC<T>(ObsVar, *pdf, data, true);
+            double prob_GoF = getGoodnessOfFitBC<T>(ObsVar, *pdf, data, use_toys);
             std::cout << "Goodness of fit: " << prob_GoF << std::endl;
         }
 
@@ -731,6 +737,9 @@ namespace RHD
         // Get asymptotic probability
         std::vector<double> BC_stats = getBCTestResult<T>(ObsVar, pdf, data);
         double asym_prob = TMath::Prob(BC_stats.at(0), BC_stats.at(1));
+        std::cout << "BC GoF test statistic value: " << BC_stats.at(0) << std::endl;
+        std::cout << "Degrees of freedom: " << BC_stats.at(1) << std::endl;
+        std::cout << "Chi2 GoF test statistic value: " << BC_stats.at(2) << std::endl;
         
         // Get Monte Carlo probability
         if (use_toys) {
@@ -746,7 +755,7 @@ namespace RHD
             std::vector<double> toy_BC_values;
 
             while (trial++ <= ntrials) {
-                if (trial%100 == 0) std::cout << "     Toy number: " << trial << std::endl;
+                if (trial%10 == 0) std::cout << "\r     Toy number: " << trial << std::endl;
                 int nevents = Generator.Poisson(ndata);
                 RooDataHist* binned_toy = pdf.generateBinned(ObsVar, nevents, false, true);
                 std::vector<double> toy_stats
@@ -756,9 +765,10 @@ namespace RHD
 
             std::sort(toy_BC_values.begin(), toy_BC_values.end());
             
-            // Plot toy distribution
+            // Plot & save toy distribution
             if (_SAVEOPTION) {
-                TH1F toy_distribution("toy_dist", "BC GoF toy dist", 100,
+                auto hist_name = Form("BC_GoF_toys_%s", pdf.GetName());
+                TH1F toy_distribution(hist_name, hist_name, 100,
                                       50 * ((int)(toy_BC_values[0]-50)%50),
                                       50 * ((int)(toy_BC_values[-1]+100)%50));
                 for (auto const& val: toy_BC_values) toy_distribution.Fill(val);
@@ -766,6 +776,12 @@ namespace RHD
                 toy_distribution.Draw();
                 fs::path plot_name = fs::path(_PLOTPATH) / fs::path(Form("GoF_%s.jpg", pdf.GetName()));
                 c.SaveAs(plot_name.c_str());
+
+                TFile* saveFile = TFile::Open(_SAVEPATHFULL.c_str(), "UPDATE");
+                auto wspace = (RooWorkspace*) saveFile->Get(_WORKSPACENAME);
+                wspace->import(toy_distribution);
+                wspace->writeToFile(_SAVEPATHFULL.c_str());
+                saveFile->Close();
             }
         }
         return asym_prob;
@@ -824,8 +840,6 @@ namespace RHD
         // Get asymptotic probability
         int dim_params = params->getSize();
         int dof = nbins_nonzero - dim_params;
-        // std::cout << "chi2: " << BC_test << std::endl;
-        // std::cout << "dof: " << dof << std::endl;
 
         // Alternative definition of GoF test stat (chi square)
         RooPlot* plot_chi2 = ObsVar.frame();
@@ -840,6 +854,7 @@ namespace RHD
         delete hist;
         return results;
     }
+
     
     double FitData::getWilksProb ( double nllNull,
                                    double nllAlt,
@@ -993,7 +1008,7 @@ namespace RHD
         // PDF and data plot
         TCanvas c;
         RooPlot* frame = ObsVar.frame(RooFit::Title(plotName));
-        data->plotOn(frame);
+        data.plotOn(frame);
 
         // Check if pdfNames and colorScheme have same size
         if (pdfNames.size() != colorScheme.size()) {

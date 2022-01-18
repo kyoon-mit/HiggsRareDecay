@@ -85,7 +85,8 @@ namespace RHD // Rare Higgs Decay
                                  const std::vector<double>& initParamValues2={} );
         template<typename T>
         void performSignalFit ( RooRealVar& ObsVar,
-                                         T& data );
+                                         T& data,
+                                       bool use_toys=false );
 
         /* Evaluate fit. */
         template<typename T>

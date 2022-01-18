@@ -36,7 +36,9 @@ namespace RHD // Rare Higgs Decay
         void listPDFs ();
 
         /* Set parameter values. */
-        void setVal ( const std::string& paramKey, double value );
+        void setVal ( const std::string& paramKey,
+                                  double value,
+                                    bool setConst=false );
         void setMultiVals (          const char* prefix,
                                              int lowOrder,
                                              int highOrder,
