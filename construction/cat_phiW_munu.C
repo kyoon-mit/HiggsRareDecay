@@ -69,22 +69,26 @@ void cat_phiW_munu()
                                       {-.02, -.35, -.47, -.4});
 
 
+    // Create toy dataset
+    fitting.saveToyData(mH, "bern3_X_gauss", "trigauss", 5., 1e+6);
+    
+    
     // Plot PDFs
-    fitting.plotMultiplePDFs(mH, data_bkg_comb, "bern_conv_gauss_extend",
-                             {"bern2_X_gauss_extend", "bern3_X_gauss_extend",
-                              "bern4_X_gauss_extend"},
+    fitting.plotMultiplePDFs(mH, data_bkg_comb, "bern_conv_gauss",
+                             {"bern2_X_gauss", "bern3_X_gauss",
+                              "bern4_X_gauss"},
                              {kGreen+2, kBlue, kViolet+7});
-    fitting.plotMultiplePDFs(mH, data_bkg_comb, "pow_conv_gauss_extend",
+    fitting.plotMultiplePDFs(mH, data_bkg_comb, "pow_conv_gauss",
                              {"pow2_X_gauss", "pow3_X_gauss"},
                              {kBlue, kRed});
-    fitting.plotMultiplePDFs(mH, data_bkg_comb, "laurent_conv_gauss_extend",
-                             {"lau3_X_gauss_extend", "lau4_X_gauss_extend",
-                              "lau5_X_gauss_extend", "lau6_X_gauss_extend",
-                              "lau7_X_gauss_extend"},
+    fitting.plotMultiplePDFs(mH, data_bkg_comb, "laurent_conv_gauss",
+                             {"lau3_X_gauss", "lau4_X_gauss",
+                              "lau5_X_gauss", "lau6_X_gauss",
+                              "lau7_X_gauss"},
                              {kGreen+2, kBlue, kViolet+7, kMagenta+1, kRed});
-    fitting.plotMultiplePDFs(mH, data_bkg_comb, "exp_conv_gauss_extend",
-                             {"exp1_X_gauss_extend", "exp2_X_gauss_extend",
-                              "exp3_X_gauss_extend", "exp4_X_gauss_extend",
-                              "exp5_X_gauss_extend"},
+    fitting.plotMultiplePDFs(mH, data_bkg_comb, "exp_conv_gauss",
+                             {"exp1_X_gauss", "exp2_X_gauss",
+                              "exp3_X_gauss", "exp4_X_gauss",
+                              "exp5_X_gauss"},
                              {kGreen+2, kBlue, kViolet+7, kMagenta+1, kRed});
 }

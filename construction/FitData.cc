@@ -200,11 +200,51 @@ namespace RHD
     }
 
 
-    void FitData::saveToyData ( const char* signalName,
+    void FitData::saveToyData ( RooRealVar& ObsVar,
+                                const char* signalName,
                                 const char* backgroundName,
                                      double signalRate,
                                      double backgroundRate )
-    {}
+    {
+        if (!_SAVEOPTION) {
+            std::cout << "saveToyData: cannot save because SAVEOPTION is false." << std::endl;
+            return;
+        }
+
+        // Open file
+        TFile* saveFile = TFile::Open(_SAVEPATHFULL.c_str(), "UPDATE");
+        auto wspace = (RooWorkspace*) saveFile->Get(_WORKSPACENAME);
+
+        // Get PDFs
+        RooAbsPdf* signal_pdf = wspace->pdf(signalName);
+        RooAbsPdf* background_pdf = wspace->pdf(backgroundName);
+        if (!signal_pdf) throw std::invalid_argument("Signal pdf is nullptr.");
+        if (!background_pdf) throw std::invalid_argument("Background pdf is nullptr.");
+
+        // Normalize rates
+        double norm = signalRate + backgroundRate;
+        double signal_fraction = signalRate / norm;
+
+        // Combine signal and background models
+        RooConstVar frac("frac", "frac", signal_fraction);
+        RooAddPdf combined_model("combined_model", "combined_model",
+                                 RooArgList(*signal_pdf, *background_pdf), frac);
+
+        // Generate toy data
+        TRandom3 Generator;
+        int nevents = Generator.Poisson(norm);
+        RooDataHist* binned_toy
+            = combined_model.generateBinned(ObsVar,
+                                            Name(Form("toydata_%s_%s",
+                                                      signal_pdf->GetName(),
+                                                      background_pdf->GetName())),
+                                            NumEvents(norm),
+                                            Extended());
+
+        // Save toy data
+        wspace->import(*binned_toy);
+        wspace->writeToFile(_SAVEPATHFULL.c_str());
+    }
 
     
     RooFitResult FitData::performChi2Fit (   RooAbsPdf& pdf,
@@ -430,13 +470,6 @@ namespace RHD
             RooFitResult fit = performChi2Fit(*(pdfs.at(order-1)), data, 150, retry);
             nlls.push_back(fit.minNll());
             dofs.push_back(fit.covarianceMatrix().GetNcols());
-
-            if (std::strcmp(pdfType, "powXgauss") == 0) {
-                if (order < 2) {
-                    order++;
-                    continue;
-                }
-            }
             
             if (order >= 2) {
                 // Calculate F-test probability using chi2 distribution
@@ -550,13 +583,6 @@ namespace RHD
             RooFitResult fit = performLikelihoodFit(*(pdfs.at(order-1)), data, 150, retry);
             nlls.push_back(fit.minNll());
             dofs.push_back(fit.covarianceMatrix().GetNcols());
-
-            if (std::strcmp(pdfType, "powXgauss") == 0) {
-                if (order < 2) {
-                    order++;
-                    continue;
-                }
-            }
             
             if (order >= 2) {
                 // Calculate F-test probability using chi2 distribution
@@ -711,7 +737,7 @@ namespace RHD
             performLikelihoodFit<T>(*pdf, data, 10);
             plotPDF<T>(ObsVar, *pdf, data);
             double prob_GoF = getGoodnessOfFitBC<T>(ObsVar, *pdf, data, use_toys);
-            std::cout << "Goodness of fit: " << prob_GoF << std::endl;
+            std::cout << "Goodness of fit: " << prob_GoF << "\n" << std::endl;
         }
 
         if (_SAVEOPTION) {
@@ -815,7 +841,7 @@ namespace RHD
         
         int nbins = hist->GetXaxis()->GetNbins();
         int nbins_nonzero = 0;
-        double N_expected = pdf.expectedEvents(ObsVar);
+        double N_expected = hist->GetEntries();
 
         double pdf_total_integral
             = pdf.createIntegral(ObsVar, RooFit::NormSet(ObsVar))->getVal();
