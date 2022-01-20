@@ -20,22 +20,22 @@ void cat_phiW_munu()
         = "/home/submit/kyoon/CMSSW_10_2_13/src/HiggsRareDecay/data/cat_phi/cat_phiW_munu";
 
     /***** SIGNAL FITTING *****/
-    // Open signal file
-    auto fn_signal = Form("%s/cat_phiW_munu_signal.root", DIR_DATA_PREFIX);
-    TFile * file = TFile::Open(fn_signal, "READ");
-    auto tree = (TTree*) file->Get("events");
-
     // Create observable variable
     double xlow = 100., xhigh = 150.;
-    int nbins = (int) 2*(xhigh - xlow);
+    int nbins = (int) 2*(xhigh - xlow); // see if this has effect on signal fitting
     RooRealVar mH("HCandMass", "HCandMass", xlow, xhigh, "GeV");
     mH.setBins(nbins);
 
-    // Create signal dataset
-    RooDataSet data_signal = fitting.makeUnbinnedData("data_signal_cat_phiW_munu", mH, tree);
+    // Create signal histogram & dataset
+    auto fn_signal = Form("%s/cat_phiW_munu_signal.root", DIR_DATA_PREFIX);
+    TH1F signal = fitting.fetchHistogram({(const char*) fn_signal}, "events", "HCandMass",
+                                         "cat_phiW_munu_signal",
+                                         "cat_phiW_munu signal",
+                                         nbins, xlow, xhigh);
+    RooDataHist data_signal = fitting.makeBinnedData("data_signal_cat_phiW_munu", mH, signal);
 
     // Fit to signal
-    fitting.performSignalFit<RooDataSet>(mH, data_signal);
+    fitting.performSignalFit<RooDataHist>(mH, data_signal);
 
     /***** BACKGROUND FITTING *****/
     // Make background histogram
@@ -47,7 +47,7 @@ void cat_phiW_munu()
 
     const std::vector<const char*> fn_bkg {fn_DYjets, fn_Wjets, fn_Wgamma, fn_Zgamma, fn_ttbar_llvv};
 
-    xlow = 40., xhigh = 200.;
+    xlow = 65., xhigh = 200.;
     nbins = (int) 2*(xhigh - xlow);
     TH1F bkg_comb = fitting.fetchHistogram(fn_bkg, "events", "HCandMass",
                                            "cat_phiW_munu_bkg_comb",
@@ -58,29 +58,26 @@ void cat_phiW_munu()
     mH.setRange(xlow, xhigh);
     RooDataHist data_bkg_comb = fitting.makeBinnedData("data_bkg_comb_cat_phiW_munu", mH, bkg_comb);
     
-    fitting.performMultiLikelihoodFit("bernXgauss", mH, data_bkg_comb,
-                                      {.61, .31, .24, .037, .047});
-    fitting.performMultiLikelihoodFit("lauXgauss", mH, data_bkg_comb);
-    fitting.performMultiLikelihoodFit("powXgauss", mH, data_bkg_comb,
-                                      {1, .7},
-                                      {-1.7, -.1});
-    fitting.performMultiLikelihoodFit("expXgauss", mH, data_bkg_comb,
-                                      {.42, .10, .61, 1.},
-                                      {-.02, -.35, -.47, -.4});
-
+    fitting.performMultiLikelihoodFit("bern", mH, data_bkg_comb);
+    fitting.performMultiLikelihoodFit("lau", mH, data_bkg_comb);
+    fitting.performMultiLikelihoodFit("pow", mH, data_bkg_comb);
+    fitting.performMultiLikelihoodFit("exp", mH, data_bkg_comb);
 
     // Create toy dataset
-    fitting.saveToyData(mH, "bern3_X_gauss", "trigauss", 5., 1e+6);
+    fitting.saveToyData(mH, "bern3", "trigauss", .5, 1e+6);
     
     
     // Plot PDFs
-    fitting.plotMultiplePDFs(mH, data_bkg_comb, "bern_conv_gauss",
+    /*
+    fitting.plotMultiplePDFs(mH, data_bkg_comb, "bern",
                              {"bern2_X_gauss", "bern3_X_gauss",
                               "bern4_X_gauss"},
                              {kGreen+2, kBlue, kViolet+7});
     fitting.plotMultiplePDFs(mH, data_bkg_comb, "pow_conv_gauss",
-                             {"pow2_X_gauss", "pow3_X_gauss"},
-                             {kBlue, kRed});
+                             {"pow2_X_gauss", "pow3_X_gauss",
+                              "pow4_X_gauss", "pow5_X_gauss",
+                              "pow6_X_gauss"},
+                             {kGreen+2, kBlue, kViolet+7, kMagenta+1, kRed});
     fitting.plotMultiplePDFs(mH, data_bkg_comb, "laurent_conv_gauss",
                              {"lau3_X_gauss", "lau4_X_gauss",
                               "lau5_X_gauss", "lau6_X_gauss",
@@ -91,4 +88,5 @@ void cat_phiW_munu()
                               "exp3_X_gauss", "exp4_X_gauss",
                               "exp5_X_gauss"},
                              {kGreen+2, kBlue, kViolet+7, kMagenta+1, kRed});
+    */
 }

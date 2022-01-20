@@ -577,6 +577,39 @@ namespace RHD
                 models.setMultiVals(Form("powsrs%d_p", order),
                                     1, std::min(order+1, plist2_size+1),
                                     params2);
+            } else if (std::strcmp(pdfType, "exp") == 0) {
+                pdfs.push_back(models.makeExponentialSeries(ObsVar, order));
+                retry = 1;
+                models.setMultiVals(Form("expsrs%d_c", order),
+                                    1, std::min(order+1, plist1_size+1),
+                                    params1);
+                models.setMultiVals(Form("expsrs%d_p", order),
+                                    1, std::min(order+1, plist2_size+1),
+                                    params2);
+            } else if (std::strcmp(pdfType, "bern") == 0) {
+                pdfs.push_back(models.makeBernsteinPoly(ObsVar, order));
+                retry = 1;
+                models.setMultiVals(Form("bern%d_c", order),
+                                    1, std::min(order+1, plist1_size+1),
+                                    params1);
+            } else if (std::strcmp(pdfType, "lau") == 0) {
+                pdfs.push_back(models.makeLaurentSeries(ObsVar, order));
+                retry = 1;
+                models.setMultiVals(Form("lau%d_l", order),
+                                    1, std::min(order+1, plist1_size+1),
+                                    params1);
+                models.setMultiVals(Form("lau%d_h", order),
+                                    1, std::min(order+1, plist2_size+1),
+                                    params2);
+            } else if (std::strcmp(pdfType, "pow") == 0) {
+                pdfs.push_back(models.makePowerSeries(ObsVar, order));
+                retry = 2;
+                models.setMultiVals(Form("powsrs%d_c", order),
+                                    1, std::min(order+1, plist1_size+1),
+                                    params1);
+                models.setMultiVals(Form("powsrs%d_p", order),
+                                    1, std::min(order+1, plist2_size+1),
+                                    params2);
             }
 
             // Perform fit
@@ -594,6 +627,8 @@ namespace RHD
                           << "   between orders " << order
                           << " and " << (order-1) << " : " << std::endl;
                 std::cout << "             " << fProb << "\n" << std::endl;
+                std::cout << "   (nll = " << nlls.at(order-2) << ", dof = "
+                          << dofs.at(order-2) << ")" << std::endl;
                 std::cout << "###################################################\n" << std::endl;
             }
             
@@ -769,7 +804,7 @@ namespace RHD
     {
         // Get asymptotic probability
         std::vector<double> BC_stats = getBCTestResult<T>(ObsVar, pdf, data);
-        double asym_prob = TMath::Prob(BC_stats.at(0), BC_stats.at(1));
+        double asym_prob = ROOT::Math::chisquared_cdf_c(BC_stats.at(0), BC_stats.at(1));
         std::cout << "BC GoF test statistic value: " << BC_stats.at(0) << std::endl;
         std::cout << "Degrees of freedom: " << BC_stats.at(1) << std::endl;
         std::cout << "Chi2 GoF test statistic value: " << BC_stats.at(2) << std::endl;
@@ -914,7 +949,7 @@ namespace RHD
             std::invalid_argument("NLLs must be positive.");
         if (!(nllNull >= nllAlt))
             std::invalid_argument("nllNull must be greater than or equal to nllAlt.");
-        return TMath::Prob(2.*(nllNull - nllAlt), dofAlt - dofNull);
+        return ROOT::Math::chisquared_cdf_c(2.*(nllNull - nllAlt), dofAlt - dofNull);
     }
 
     
