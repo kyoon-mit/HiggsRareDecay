@@ -47,7 +47,7 @@ void cat_phiW_munu()
 
     const std::vector<const char*> fn_bkg {fn_DYjets, fn_Wjets, fn_Wgamma, fn_Zgamma, fn_ttbar_llvv};
 
-    xlow = 65., xhigh = 200.;
+    xlow = 70., xhigh = 200.;
     nbins = (int) 2*(xhigh - xlow);
     TH1F bkg_comb = fitting.fetchHistogram(fn_bkg, "events", "HCandMass",
                                            "cat_phiW_munu_bkg_comb",
@@ -66,7 +66,13 @@ void cat_phiW_munu()
     // Create toy dataset
     fitting.saveToyData(mH, "bern3", "trigauss", .5, 1e+6);
     
-    
+    // Make RooMultiPdf
+    fitting.saveMultiPdf({"bern2", "bern3", "bern4",
+                          "lau2", "lau3",
+                          "powsrs1", "powsrs2",
+                          "expsrs1", "expsrs2"},
+                          "background_multipdf",
+                          1125151.1);
     // Plot PDFs
     /*
     fitting.plotMultiplePDFs(mH, data_bkg_comb, "bern",

@@ -2,8 +2,8 @@ imax 1 number of channels
 jmax 1 number of background
 kmax * number of nuisance parameters
 -----------------------------------------------------------------------------------------------------
-shapes data_obs         cat_phiW_munu   ../models/cat_phiW_munu.root    w:toydata_bern3_X_gauss_trigauss
-shapes bkg_combined     cat_phiW_munu   ../models/cat_phiW_munu.root    w:bern3_X_gauss
+shapes data_obs         cat_phiW_munu   ../models/cat_phiW_munu.root    w:toydata_bern3_trigauss
+shapes bkg_combined     cat_phiW_munu   ../models/cat_phiW_munu.root    w:background_multipdf
 shapes signal_model     cat_phiW_munu   ../models/cat_phiW_munu.root    w:trigauss
 -----------------------------------------------------------------------------------------------------
 bin             cat_phiW_munu
@@ -12,6 +12,6 @@ observation     -1.0
 bin                             cat_phiW_munu   cat_phiW_munu
 process                         signal_model    bkg_combined
 process                         0               1
-rate                            538073.85       1125151.1           
+rate                            538073.85       1
 ---------------------------------------------------------------------------
 lumi_Run2_2016_2018     lnN     1.016           1.016
