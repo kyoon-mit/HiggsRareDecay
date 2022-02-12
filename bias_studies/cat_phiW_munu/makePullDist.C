@@ -10,9 +10,11 @@ void makePullDist (const char* filename, const char* outprefix, float rGen)
 
     // Set branch address
     double r, rHiErr, rLoErr;
+    int numbadnll;
     tree_fit_sb->SetBranchAddress("r", &r);
     tree_fit_sb->SetBranchAddress("rHiErr", &rHiErr);
     tree_fit_sb->SetBranchAddress("rLoErr", &rLoErr);
+    tree_fit_sb->SetBranchAddress("numbadnll", &numbadnll);
 
     // Create histogram
     TH1F hr("hr", "r", 80, -20, 20);
@@ -25,7 +27,11 @@ void makePullDist (const char* filename, const char* outprefix, float rGen)
     for (long i=0; i<nentries; i++) {
         tree_fit_sb->GetEntry(i);
         hr.Fill(r);
-        hpull.Fill((r-rGen)/(.5*(rHiErr+rLoErr)));
+	if ((0 < abs(rHiErr/rLoErr)) &&
+            (abs(rHiErr/rLoErr) < 2) &&
+            (numbadnll == 0)) {
+            hpull.Fill((r-rGen)/(.5*(rHiErr+rLoErr)));
+        }
     }
 
     TCanvas c;
