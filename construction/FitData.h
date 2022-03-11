@@ -42,7 +42,9 @@ namespace RHD // Rare Higgs Decay
                                                   const char* histTitle,
                                                           int nbins,
                                                        double xlow,
-                                                       double xhigh );
+                                                       double xhigh,
+                                                  const char* weightBranchName="",
+                                                       double scale=1. );
 
         /* Make data histogram. */
         RooDataHist makeBinnedData ( const char* name,
@@ -131,7 +133,8 @@ namespace RHD // Rare Higgs Decay
         inline void setWorkspaceName ( const char* wspaceName ) { _WORKSPACENAME = wspaceName; }
         void setSaveOption ( bool saveOption, bool recreate=false );
         void saveMultiPdf ( const std::vector<const char*>& pdfNameList,
-                                                const char* multipdfName );
+                                                const char* multipdfName,
+                                                     double initialNorm );
         void saveFitResults (); //
 
     private:

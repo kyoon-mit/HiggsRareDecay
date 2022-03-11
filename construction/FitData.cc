@@ -96,7 +96,8 @@ namespace RHD
 
 
     void FitData::saveMultiPdf ( const std::vector<const char*>& pdfNameList,
-                                                     const char* multipdfName )
+                                                     const char* multipdfName,
+                                                          double initialNorm )
     /*
      * Fetches PDFs in the OUTFILE specified by pdfNameList, adds them in
      * a RooMultiPdf instance, and saves the RooMultiPdf to the WORKSPACE
@@ -126,6 +127,10 @@ namespace RHD
                 }
             }
             RooMultiPdf multipdf(multipdfName, multipdfName, pdf_index, pdf_list);
+            RooRealVar norm(Form("%s_norm", multipdfName),
+                            "Number of background events",
+                            initialNorm, 0, 1e+30);
+            wspace->import(norm);
             wspace->import(multipdf);
             wspace->writeToFile(_SAVEPATHFULL.c_str());
             outfile->Close();
@@ -140,7 +145,9 @@ namespace RHD
                                                        const char* histTitle,
                                                                int nbins,
                                                             double xlow,
-                                                            double xhigh )
+                                                            double xhigh,
+                                                       const char* weightBranchName,
+                                                            double scale )
     /*
      * Fetch histograms from data files.
      */
@@ -151,14 +158,18 @@ namespace RHD
             auto file = TFile(fname, "READ");
             TTreeReader reader(treeName, &file);
             TTreeReaderValue<float> var(reader, branchName);
+            TTreeReaderValue<double> weight(reader, weightBranchName);
             while (reader.Next()) {
-                hist.Fill(*var);
+                if (*weightBranchName != 0) hist.Fill(*var, *weight);
+                else hist.Fill(*var);
             }
         }
 
+        if (scale != 1.) hist.Scale(scale);
+
         return hist;
     }
-
+ 
     
     RooDataHist FitData::makeBinnedData ( const char* name,
                                           RooRealVar& ObsVar,
@@ -220,6 +231,8 @@ namespace RHD
         RooAbsPdf* background_pdf = wspace->pdf(backgroundName);
         if (!signal_pdf) throw std::invalid_argument("Signal pdf is nullptr.");
         if (!background_pdf) throw std::invalid_argument("Background pdf is nullptr.");
+        std::cout << "Creating toy data with " << signalName
+                  << " and " << backgroundName << std::endl;
 
         // Normalize rates
         double norm = signalRate + backgroundRate;
@@ -1149,6 +1162,6 @@ namespace RHD
                                                                    RooDataHist&,
                                                                    const std::vector<double>&,
                                                                    const std::vector<double>&,
-                                                                   double );
+                                                                  double );
     // TODO: finish this list
 }
