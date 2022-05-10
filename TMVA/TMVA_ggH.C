@@ -19,9 +19,10 @@ void TMVA_ggH ( const char* outFileName,
     bool useRandomSplitting = false; // for cross validation
     bool useLikelihood = true;    // likelihood based discriminant
     bool useLikelihoodKDE = false;    // likelihood based discriminant
-    bool useFischer = true;       // Fischer discriminant
+    bool useFischer = false;       // Fischer discriminant
     bool useMLP = false;          // Multi Layer Perceptron (old TMVA NN implementation)
     bool useBDT = true;           // Boosted Decision Tree
+    bool useBDTG = true;           // BDT with GradBoost
     bool useDL = false;            // TMVA Deep learning ( CPU or GPU)
     bool useKeras = false;        // Keras Deep learning
     bool usePyTorch = false;      // PyTorch Deep learning
@@ -56,7 +57,7 @@ void TMVA_ggH ( const char* outFileName,
     const char* idx1 = "events.index_pair[1]"; // Photon index
     // dataloader->AddVariable("HCandMass", "HCandMass", "", 'F'); // DON'T!!!!!
     dataloader->AddVariable("HCandPT_div := HCandPT/HCandMass", 'F'); // divide by HCandMass
-    dataloader->AddVariable(Form("goodPhotons_pt[%s]", idx1), "goodPhotons_pt", "", 'F');
+    dataloader->AddVariable(Form("goodPhotons_pt[%s]/HCandMass", idx1), "goodPhotons_pt", "", 'F');
     dataloader->AddVariable(Form("goodPhotons_eta[%s]", idx1), "goodPhotons_eta", "", 'F');
     // dataloader->AddVariable(Form("goodPhotons_pfRelIso03_all[%s]", idx1), "goodPhotons_pfRelIso03_all", "", 'F');
     // dataloader->AddVariable(Form("goodPhotons_hoe[%s]", idx1), "goodPhotons_hoe", "", 'F');
@@ -64,18 +65,18 @@ void TMVA_ggH ( const char* outFileName,
     // dataloader->AddVariable(Form("goodPhotons_sieie[%s]", idx1), "goodPhotons_sieie", "", 'F');
     dataloader->AddVariable("SoftActivityJetNjets5", "SoftActivityJetNjets5", "", 'I');
     dataloader->AddVariable("DeepMETResolutionTune_pt", "DeepMETResolutionTune_pt", "", 'F');
-    dataloader->AddVariable(Form("goodMeson_DR[%s]", idx0), "goodMeson_DR", "", 'F');
+    dataloader->AddVariable(Form("goodMeson_DR := goodMeson_DR[%s]/HCandMass", idx0), 'F');
     dataloader->AddVariable(Form("goodMeson_mass[%s]", idx0), "goodMeson_mass", "", 'F');
-    dataloader->AddVariable(Form("goodMeson_pt[%s]", idx0), "goodMeson_pt", "", 'F');
+    dataloader->AddVariable(Form("goodMeson_pt := goodMeson_pt[%s]/HCandMass", idx0), 'F');
     dataloader->AddVariable(Form("goodMeson_iso[%s]", idx0), "goodMeson_iso", "", 'F');
-    dataloader->AddVariable(Form("leadTrkPt := TMath::Max(goodMeson_trk1_pt[%s], goodMeson_trk2_pt[%s])", idx0, idx0), 'F');
-    dataloader->AddVariable(Form("subLeadTrkPt := TMath::Min(goodMeson_trk1_pt[%s], goodMeson_trk2_pt[%s])", idx0, idx0), 'F');
+    dataloader->AddVariable(Form("leadTrkPt_div := TMath::Max(goodMeson_trk1_pt[%s], goodMeson_trk2_pt[%s])/HCandMass", idx0, idx0), 'F');
+    dataloader->AddVariable(Form("subLeadTrkPt_div := TMath::Min(goodMeson_trk1_pt[%s], goodMeson_trk2_pt[%s])/HCandMass", idx0, idx0), 'F');
     dataloader->AddVariable(Form("leadTrkEta := TMath::Max(goodMeson_trk1_eta[%s], goodMeson_trk2_eta[%s])", idx0, idx0), 'F');
     dataloader->AddVariable(Form("subLeadTrkEta := TMath::Min(goodMeson_trk1_eta[%s], goodMeson_trk2_eta[%s])", idx0, idx0), 'F');
     dataloader->AddVariable(Form("goodMeson_vtx_prob[%s]", idx0), "goodMeson_vtx_prob", "", 'F');
     dataloader->AddVariable("goodMeson_massErr[events.index_pair[0]]", "goodMeson_massErr", "", 'F');
-    dataloader->AddVariable("abs(dPhiGammaMesonCand)", "dPhiGammaMesonCand", "", 'F');
-    dataloader->AddVariable("abs(dEtaGammaMesonCand)", "dEtaGammaMesonCand", "", 'F');
+    dataloader->AddVariable("dPhiGammaMesonCand_div := abs(dPhiGammaMesonCand/HCandMass)", 'F');
+    dataloader->AddVariable("dEtaGammaMesonCand_div := abs(dEtaGammaMesonCand/HCandMass)", 'F');
     dataloader->AddVariable("nGoodJets", "nGoodJets", "", 'F');
     /* For VBF
     dataloader->AddVariable("mJJ", "mJJ", "", 'F');
@@ -100,7 +101,7 @@ void TMVA_ggH ( const char* outFileName,
     const char* testTreeEventSplitStr = "(events % 10)<5";
     
     // Apply cuts
-    const char* higgsMass = "";
+    const char* higgsMass = "HCandMass > 90 && HCandMass <= 170 &&";
     //const char* nanRemove = " && !TMath::IsNaN(goodMeson_massErr[events.index_pair[0]])";
     const char* nanRemove = "!TMath::IsNaN(goodMeson_massErr[events.index_pair[0]])";
     
@@ -127,7 +128,7 @@ void TMVA_ggH ( const char* outFileName,
                                            ":NormMode=NumEvents"
                                            ":!V");
     // Use cross validation
-    int numFolds = 5;
+    int numFolds = 3;
     const char* analysisType = "Classification";
     const char* splitType = (useRandomSplitting) ? "Random" : "Deterministic";
     const char* splitExpr = (!useRandomSplitting) ? "int(fabs([eventID]))%int([NumFolds])" : "";
@@ -180,6 +181,12 @@ void TMVA_ggH ( const char* outFileName,
     {
         cv.BookMethod(TMVA::Types::kBDT, "BDT",
                       "!V:NTrees=200:MinNodeSize=2.5%:MaxDepth=2:BoostType=AdaBoost:AdaBoostBeta=0.5:UseBaggedBoost:BaggedSampleFraction=0.5:SeparationType=GiniIndex:nCuts=20" );
+    }
+
+    if (useBDTG)
+    {
+        cv.BookMethod(TMVA::Types::kBDT, "BDTG",
+                      "!V:NTrees=1000:BoostType=Grad:Shrinkage=0.30:MaxDepth=4:SeparationType=GiniIndex:nCuts=20" ); // UseRandomisedTrees:UseNvars=10:UseBaggedBoost:BaggedSampleFraction btwn 0.5 0.8 - check performance
     }
  
     // Multi-Layer Perceptron (Neural Network)
