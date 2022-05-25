@@ -1,112 +1,156 @@
+#include <string.h>
 #include "TROOT.h"
+#include "TMVA/CrossValidation.h"
 #include "TMVA/DataLoader.h"
 #include "TMVA/Factory.h"
 #include "TMVA/Types.h"
 #include "TFile.h"
-#include "TChain.h"
-#include "TChainElement.h"
 #include "TCollection.h"
 #include "TCut.h"
 #include "TObjArray.h"
 #include "TString.h"
 #include "TTree.h"
 
-void TMVA_VBF ( const char* outFileName )
+void TMVA_VBF ( const char* outFileName,
+                const char* channel )
 {
     // options to control used methods
+    bool useRandomSplitting = false; // option for cross validation
     bool useLikelihood = true;    // likelihood based discriminant
     bool useLikelihoodKDE = false;    // likelihood based discriminant
     bool useFischer = true;       // Fischer discriminant
     bool useMLP = false;          // Multi Layer Perceptron (old TMVA NN implementation)
     bool useBDT = true;           // Boosted Decision Tree
-    bool useDL = false;            // TMVA Deep learning ( CPU or GPU)
-    bool useKeras = false;        // Keras Deep learning
-    bool usePyTorch = false;      // PyTorch Deep learning
+    bool useBDTG = true;         // BDT with GradBoost
+    bool useDL = true;            // TMVA Deep Learning ( CPU or GPU)
+    // bool useKeras = false;        // Keras Deep learning
     
     // Open files
-    //TChain bkgfiles("events");
-    TString fileformat = "/home/submit/kyoon/CMSSW_10_2_13/src/HiggsRareDecay/data/cat_phi/cat_phi_VBF/outname_mc%d_VBFcat_PhiCat_2018.root";
-    TFile* sgnfile = TFile::Open(Form(fileformat, 1010), "READ");
-    TFile* bkgfile1 = TFile::Open(Form(fileformat, 6), "READ");
-    TFile* bkgfile2 = TFile::Open(Form(fileformat, 7), "READ");
-    TFile* bkgfile3 = TFile::Open(Form(fileformat, 8), "READ");
-    TFile* bkgfile4 = TFile::Open(Form(fileformat, 9), "READ");
-    //bkgfiles.Add(backgroundFileNames);
+    TString fileformat;
+    TFile* sgnfile;
+    TFile* bkgfile1;
+    TFile* bkgfile2;
+    TFile* bkgfile3;
+    TFile* bkgfile4;
+    if ( std::strcmp(channel, "phi") == 0 ) {
+        fileformat = "/work/submit/kyoon/RareHiggs/data/cat_phi/cat_phi_VBF/outname_mc%d_VBFcat_PhiCat_2018.root";
+        sgnfile = TFile::Open(Form(fileformat, 1010), "READ");
+    } else if ( std::strcmp(channel, "rho") == 0 ) {
+        fileformat = "/work/submit/kyoon/RareHiggs/data/cat_rho/cat_rho_VBF/outname_mc%d_VBFcat_RhoCat_2018.root";
+        sgnfile = TFile::Open(Form(fileformat, 1020), "READ");
+    }
+    bkgfile1 = TFile::Open(Form(fileformat, 6), "READ");
+    bkgfile2 = TFile::Open(Form(fileformat, 7), "READ");
+    bkgfile3 = TFile::Open(Form(fileformat, 8), "READ");
+    bkgfile4 = TFile::Open(Form(fileformat, 9), "READ");
 
-    // Initialize the factory
+    // Initialize the dataset
     TFile* outfile = TFile::Open(outFileName, "RECREATE");
-    TMVA::Factory factory("TMVAClassification", outfile, "!V:!Silent:Color:DrawProgressBar:Transformations=I;D;P;G,D:AnalysisType=Classification");
     TMVA::DataLoader *dataloader = new TMVA::DataLoader("dataset");
-
+    
     // Add variables to dataset
-    dataloader->AddVariable("HCandMass", "HCandMass", "", 'F');
-    dataloader->AddVariable("HCandPT", "HCandPT", "", 'F');
-    dataloader->AddVariable("goodPhotons_pt[0]", "goodPhotons_pt", "", 'F');
-    dataloader->AddVariable("goodPhotons_eta[0]", "goodPhotons_eta", "", 'F');
-    dataloader->AddVariable("goodPhotons_pfRelIso03_all[0]", "goodPhotons_pfRelIso03_all", "", 'F');
-    dataloader->AddVariable("goodPhotons_hoe[0]", "goodPhotos_hoe", "", 'F');
-    dataloader->AddVariable("goodPhotons_r9[0]", "goodPhotons_r9", "", 'F');
-    dataloader->AddVariable("goodPhotons_sieie[0]", "goodPhotons_sieie", "", 'F');
+    const char* idx0 = "events.index_pair[0]"; // Meson index
+    const char* idx1 = "events.index_pair[1]"; // Photon index
+    // dataloader->AddVariable("HCandMass", "HCandMass", "", 'F'); // DON'T USE!!
+    dataloader->AddVariable("HCandPT", 'F'); // divide by HCandMass
+    dataloader->AddVariable(Form("goodPhotons_pt[%s]", idx1), "goodPhotons_pt", "", 'F');
+    dataloader->AddVariable(Form("goodPhotons_eta[%s]", idx1), "goodPhotons_eta", "", 'F');
+    // dataloader->AddVariable(Form("goodPhotons_pfRelIso03_all[%s]", idx1), "goodPhotons_pfRelIso03_all", "", 'F');
+    //dataloader->AddVariable(Form("goodPhotons_hoe[%s]", idx1), "goodPhotons_hoe", "", 'F');
+    //dataloader->AddVariable(Form("goodPhotons_r9[%s]", idx1), "goodPhotons_r9", "", 'F');
+    //dataloader->AddVariable(Form("goodPhotons_sieie[%s]", idx1), "goodPhotons_sieie", "", 'F');
     dataloader->AddVariable("SoftActivityJetNjets5", "SoftActivityJetNjets5", "", 'I');
-    dataloader->AddVariable("MET_pt", "MET_pt", "", 'F');
-    dataloader->AddVariable("PV_npvsGood", "PV_npvsGood", "", 'F');
-    dataloader->AddVariable("goodMeson_DR[0]", "goodMeson_DR", "", 'F');
-    dataloader->AddVariable("goodMeson_mass[0]", "goodMeson_mass", "", 'F');
-    dataloader->AddVariable("goodMeson_pt[0]", "goodMeson_pt", "", 'F');
-    dataloader->AddVariable("goodMeson_iso[0]", "goodMeson_iso", "", 'F');
-    dataloader->AddVariable("goodMeson_trk1_pt[0]", "goodMeson_trk1_pt", "", 'F');
-    dataloader->AddVariable("goodMeson_trk2_pt[0]", "goodMeson_trk2_pt", "", 'F');
-    dataloader->AddVariable("goodMeson_trk1_eta[0]", "goodMeson_trk1_eta", "", 'F');
-    dataloader->AddVariable("goodMeson_trk2_eta[0]", "goodMeson_trk2_eta", "", 'F');
-    dataloader->AddVariable("goodMeson_vtx_chi2dof", "goodMeson_vtx_chi2dof", "", 'F');
-    dataloader->AddVariable("goodMeson_vtx_prob[0]", "goodMeson_vtx_prob", "", 'F');
-    //dataloader->AddVariable("goodMeson_massErr[0]", "goodMeson_massErr", "", 'F');
-    dataloader->AddVariable("dPhiGammaMesonCand", "dPhiGammaMesonCand", "", 'F');
-    dataloader->AddVariable("dEtaGammaMesonCand", "dEtaGammaMesonCand", "", 'F');
+    dataloader->AddVariable("DeepMETResolutionTune_pt", "DeepMETResolutionTune_pt", "", 'F');
+    dataloader->AddVariable(Form("goodMeson_DR[%s]", idx0), "goodMeson_DR", "", 'F');
+    dataloader->AddVariable(Form("goodMeson_mass[%s]", idx0), "goodMeson_mass", "", 'F');
+    dataloader->AddVariable(Form("goodMeson_pt[%s]", idx0), "goodMeson_pt", "", 'F');
+    dataloader->AddVariable(Form("goodMeson_iso[%s]", idx0), "goodMeson_iso", "", 'F');
+    dataloader->AddVariable(Form("leadTrkPt := TMath::Max(goodMeson_trk1_pt[%s], goodMeson_trk2_pt[%s])", idx0, idx0), 'F');
+    dataloader->AddVariable(Form("subLeadTrkPt := TMath::Min(goodMeson_trk1_pt[%s], goodMeson_trk2_pt[%s])", idx0, idx0), 'F');
+    dataloader->AddVariable(Form("leadTrkEta := TMath::Max(goodMeson_trk1_eta[%s], goodMeson_trk2_eta[%s])", idx0, idx0), 'F');
+    dataloader->AddVariable(Form("subLeadTrkEta := TMath::Min(goodMeson_trk1_eta[%s], goodMeson_trk2_eta[%s])", idx0, idx0), 'F');
+    dataloader->AddVariable(Form("goodMeson_vtx_prob[%s]", idx0), "goodMeson_vtx_prob", "", 'F');
+    dataloader->AddVariable("goodMeson_massErr[events.index_pair[0]]", "goodMeson_massErr", "", 'F');
+    dataloader->AddVariable("abs(dPhiGammaMesonCand)", "dPhiGammaMesonCand", "", 'F');
+    dataloader->AddVariable("abs(dEtaGammaMesonCand)", "dEtaGammaMesonCand", "", 'F');
+    dataloader->AddVariable("nGoodJets", "nGoodJets", "", 'F');
     dataloader->AddVariable("mJJ", "mJJ", "", 'F');
-    dataloader->AddVariable("nGoodJets", "nGoodJets", "", 'I');
-    dataloader->AddVariable("dEtaJJ", "dEtaJJ", "", 'F');
+    dataloader->AddVariable("abs(dEtaJJ)", "dEtaJJ", "", 'F');
+    dataloader->AddVariable("abs(dPhiJJ)", "dPhiJJ", "", 'F');
     dataloader->AddVariable("Y1Y2", "Y1Y2", "", 'F');
     dataloader->AddVariable("deltaJetMeson", "deltaJetMeson", "", 'F');
+    dataloader->AddVariable("deltaJetPhoton", "deltaJetPhoton", "", 'F');
+    dataloader->AddVariable("jet1Pt", "jet1Pt", "", 'F');
+    dataloader->AddVariable("jet2Pt", "jet2Pt", "", 'F');
+
+    // Set weights
+    dataloader->SetWeightExpression("w");
+
+    // Spectator used for split
+    // dataloader->AddSpectator("Entry$", "eventID");
 
     // Apply split
     ////////////////////// TODO: use cross validation /////////////////////////
-    TString trainTreeEventSplitStr = "(events % 10)>=5";
-    TString testTreeEventSplitStr = "(events % 10)<5";
-
+    const char* trainTreeEventSplitStr = "Entry$ > 1"; //"(Entry$ % 10)>=5";
+    const char* testTreeEventSplitStr = "Entry$ == 1"; //"(Entry$ % 10)<5";
+    
     // Apply cuts
-    TCut cutTrainSignal = Form("%s", trainTreeEventSplitStr.Data());
-    TCut cutTrainBkg = Form("%s", trainTreeEventSplitStr.Data());
-    TCut cutTestSignal = Form("%s", testTreeEventSplitStr.Data());
-    TCut cutTestBkg = Form("%s", testTreeEventSplitStr.Data());
-
+    const char* higgsMass = "HCandMass > 90 && HCandMass <= 170";
+    const char* nanRemove = "!TMath::IsNaN(goodMeson_massErr[events.index_pair[0]])";
+    
+    TCut cutSignalTrain = Form("%s && %s && %s", trainTreeEventSplitStr, higgsMass, nanRemove);
+    TCut cutBkgTrain = Form("%s && %s && %s", trainTreeEventSplitStr, higgsMass, nanRemove);
+    TCut cutSignalTest = Form("%s && %s && %s", testTreeEventSplitStr, higgsMass, nanRemove);
+    TCut cutBkgTest = Form("%s && %s && %s", testTreeEventSplitStr, higgsMass, nanRemove);
+    
     // Register trees
+    ///////////////////// TODO: add weight per event basis /////////////////////
     double signalWeight = 1.0;
     double backgroundWeight = 1.0;
     //dataloader->AddTree((TTree*)sgnfile->Get("events"), "Signal",
     //                    signalWeight, cutTrainSignal, "train");
     //dataloader->AddTree((TTree*)sgnfile->Get("events"), "Signal",
     //                    signalWeight, cutTestSignal, "test");
-    dataloader->AddSignalTree((TTree*)sgnfile->Get("events"), signalWeight);
-    dataloader->AddBackgroundTree((TTree*)bkgfile1->Get("events"), backgroundWeight);
-    dataloader->AddBackgroundTree((TTree*)bkgfile2->Get("events"), backgroundWeight);
-    dataloader->AddBackgroundTree((TTree*)bkgfile3->Get("events"), backgroundWeight);
-    dataloader->AddBackgroundTree((TTree*)bkgfile4->Get("events"), backgroundWeight);
+    dataloader->AddTree((TTree*)sgnfile->Get("events"), "Signal", signalWeight, cutSignalTrain, "train");
+    dataloader->AddTree((TTree*)bkgfile1->Get("events"), "Background", backgroundWeight, cutBkgTrain, "train");
+    dataloader->AddTree((TTree*)bkgfile2->Get("events"), "Background", backgroundWeight, cutBkgTrain, "train");
+    dataloader->AddTree((TTree*)bkgfile3->Get("events"), "Background", backgroundWeight, cutBkgTrain, "train");
+    dataloader->AddTree((TTree*)bkgfile4->Get("events"), "Background", backgroundWeight, cutBkgTrain, "train");
+    dataloader->AddTree((TTree*)sgnfile->Get("events"), "Signal", signalWeight, cutSignalTest, "test");
+    dataloader->AddTree((TTree*)bkgfile1->Get("events"), "Background", backgroundWeight, cutBkgTest, "test");
+    dataloader->AddTree((TTree*)bkgfile2->Get("events"), "Background", backgroundWeight, cutBkgTest, "test");
+    dataloader->AddTree((TTree*)bkgfile3->Get("events"), "Background", backgroundWeight, cutBkgTest, "test");
+    dataloader->AddTree((TTree*)bkgfile4->Get("events"), "Background", backgroundWeight, cutBkgTest, "test");
     /*
-    TObjArray *fileElements = bkgfiles.GetListOfFiles();
-    TIter next(fileElements);
-    TChainElement *chEl=0;
-    while (( chEl=(TChainElement*)next() ))
-    {
-        TFile f(chEl->GetTitle());
-        //dataloader->AddTree((TTree*)f.Get("events"), "Background",
-        //                    backgroundWeight, cutTrainBkg, "train");
-        //dataloader->AddTree((TTree*)f.Get("events"), "Background",
-        //                    backgroundWeight, cutTestBkg, "test");
-        dataloader->AddBackgroundTree((TTree*)f.Get("events"), backgroundWeight);
-    }
+    dataloader->PrepareTrainingAndTestTree(cutSignal, cutBkg,
+                                           "nTrain_Signal=-1"
+                                           "nTrain_Background=-1"
+                                           "nTest_Signal=0"
+                                           ":nTest_Background=0"
+                                           ":SplitMode=Random"
+                                           ":NormMode=NumEvents"
+                                           ":!V");
     */
 
+    TMVA::Factory factory("TMVAClassification", outfile, "!V:!Silent:Color:DrawProgressBar:Transformations=I;D;P;G,D:AnalysisType=Classification");
+
+    /*
+    // Use cross validation
+    int numFolds = 3;
+    const char* analysisType = "Classification";
+    const char* splitType = (useRandomSplitting) ? "Random" : "Deterministic";
+    const char* splitExpr = (!useRandomSplitting) ? "int(fabs([eventID]))%int([NumFolds])" : "";
+    TString cvOptions = Form("!V"
+                            ":!Silent"
+                            ":ModelPersistence"
+                            ":AnalysisType=%s"
+                            ":SplitType=%s"
+                            ":NumFolds=%i"
+                            ":SplitExpr=%s",
+                            analysisType, splitType, numFolds, splitExpr);
+    TMVA::CrossValidation cv("TMVACrossValidation", dataloader, outfile, cvOptions);
+    */
+    
     // Prepare training and test trees
     TString prepareOptions = "NormMode=None";
     prepareOptions+=":SplitMode=random:!V";
@@ -124,35 +168,111 @@ void TMVA_VBF ( const char* outFileName )
     // Likelihood ("naive Bayes estimator")
     if (useLikelihood)
     {
-        factory.BookMethod(dataloader, TMVA::Types::kLikelihood, "Likelihood",
-                           "H:!V:TransformOutput:PDFInterpol=Spline2:NSmoothSig[0]=20:NSmoothBkg[0]=20:NSmoothBkg[1]=10:NSmooth=1:NAvEvtPerBin=50" );
+        factory.BookMethod(dataloader,TMVA::Types::kLikelihood, "Likelihood",
+                      "H:!V:TransformOutput:PDFInterpol=Spline2:NSmoothSig[0]=20:NSmoothBkg[0]=20:NSmoothBkg[1]=10:NSmooth=1:NAvEvtPerBin=50" );
     }
     // Use a kernel density estimator to approximate the PDFs
     if (useLikelihoodKDE)
     {
-        factory.BookMethod(dataloader, TMVA::Types::kLikelihood, "LikelihoodKDE",
-                           "!H:!V:!TransformOutput:PDFInterpol=KDE:KDEtype=Gauss:KDEiter=Adaptive:KDEFineFactor=0.3:KDEborder=None:NAvEvtPerBin=50" );
+        factory.BookMethod(dataloader,TMVA::Types::kLikelihood, "LikelihoodKDE",
+                      "!H:!V:!TransformOutput:PDFInterpol=KDE:KDEtype=Gauss:KDEiter=Adaptive:KDEFineFactor=0.3:KDEborder=None:NAvEvtPerBin=50" );
  
     }
  
     // Fisher discriminant (same as LD)
     if (useFischer)
     {
-        factory.BookMethod(dataloader, TMVA::Types::kFisher, "Fisher", "H:!V:Fisher:VarTransform=None:CreateMVAPdfs:PDFInterpolMVAPdf=Spline2:NbinsMVAPdf=50:NsmoothMVAPdf=10" );
+        factory.BookMethod(dataloader,TMVA::Types::kFisher, "Fisher", "H:!V:Fisher:VarTransform=None:CreateMVAPdfs:PDFInterpolMVAPdf=Spline2:NbinsMVAPdf=50:NsmoothMVAPdf=10" );
     }
  
     // Boosted Decision Trees
     if (useBDT)
     {
         factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDT",
-                           "!V:NTrees=200:MinNodeSize=2.5%:MaxDepth=2:BoostType=AdaBoost:AdaBoostBeta=0.5:UseBaggedBoost:BaggedSampleFraction=0.5:SeparationType=GiniIndex:nCuts=20" );
+                      "!V:NTrees=200:MinNodeSize=2.5%:MaxDepth=2:BoostType=AdaBoost:AdaBoostBeta=0.5:UseBaggedBoost:BaggedSampleFraction=0.5:SeparationType=GiniIndex:nCuts=20" );
+    }
+
+    if (useBDTG)
+    {
+        /*
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d3_t50",
+                      "!V:NTrees=50:BoostType=Grad:Shrinkage=0.30:MaxDepth=3:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d3_t100",
+                      "!V:NTrees=100:BoostType=Grad:Shrinkage=0.30:MaxDepth=3:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d3_t150",
+                      "!V:NTrees=150:BoostType=Grad:Shrinkage=0.30:MaxDepth=3:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d3_t200",
+                      "!V:NTrees=200:BoostType=Grad:Shrinkage=0.30:MaxDepth=3:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d3_t250",
+                      "!V:NTrees=250:BoostType=Grad:Shrinkage=0.30:MaxDepth=3:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d3_t300",
+                      "!V:NTrees=300:BoostType=Grad:Shrinkage=0.30:MaxDepth=3:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );        
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d3_t350",
+                      "!V:NTrees=350:BoostType=Grad:Shrinkage=0.30:MaxDepth=3:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        */
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d3_t400",
+                      "!V:NTrees=400:BoostType=Grad:Shrinkage=0.30:MaxDepth=3:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=8:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        /*
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d3_t450",
+                      "!V:NTrees=450:BoostType=Grad:Shrinkage=0.30:MaxDepth=3:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d3_t500",
+                      "!V:NTrees=500:BoostType=Grad:Shrinkage=0.30:MaxDepth=3:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d3_t550",
+                      "!V:NTrees=550:BoostType=Grad:Shrinkage=0.30:MaxDepth=3:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d3_t600",
+                      "!V:NTrees=600:BoostType=Grad:Shrinkage=0.30:MaxDepth=3:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d3_t650",
+                      "!V:NTrees=650:BoostType=Grad:Shrinkage=0.30:MaxDepth=3:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d3_t700",
+                      "!V:NTrees=700:BoostType=Grad:Shrinkage=0.30:MaxDepth=3:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );        
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d3_t750",
+                      "!V:NTrees=750:BoostType=Grad:Shrinkage=0.30:MaxDepth=3:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d3_t800",
+                      "!V:NTrees=800:BoostType=Grad:Shrinkage=0.30:MaxDepth=3:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        */
+        /*
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d4_t50",
+                      "!V:NTrees=50:BoostType=Grad:Shrinkage=0.30:MaxDepth=4:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d4_t100",
+                      "!V:NTrees=100:BoostType=Grad:Shrinkage=0.30:MaxDepth=4:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d4_t150",
+                      "!V:NTrees=150:BoostType=Grad:Shrinkage=0.30:MaxDepth=4:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d4_t200",
+                      "!V:NTrees=200:BoostType=Grad:Shrinkage=0.30:MaxDepth=4:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d4_t250",
+                      "!V:NTrees=250:BoostType=Grad:Shrinkage=0.30:MaxDepth=4:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d4_t300",
+                      "!V:NTrees=300:BoostType=Grad:Shrinkage=0.30:MaxDepth=4:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );        
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d4_t350",
+                      "!V:NTrees=350:BoostType=Grad:Shrinkage=0.30:MaxDepth=4:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        */
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d4_t400",
+                      "!V:NTrees=400:BoostType=Grad:Shrinkage=0.30:MaxDepth=4:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=8:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        /*
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d4_t450",
+                      "!V:NTrees=450:BoostType=Grad:Shrinkage=0.30:MaxDepth=4:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d4_t500",
+                      "!V:NTrees=500:BoostType=Grad:Shrinkage=0.30:MaxDepth=4:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d4_t550",
+                      "!V:NTrees=550:BoostType=Grad:Shrinkage=0.30:MaxDepth=4:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d4_t600",
+                      "!V:NTrees=600:BoostType=Grad:Shrinkage=0.30:MaxDepth=4:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d4_t650",
+                      "!V:NTrees=650:BoostType=Grad:Shrinkage=0.30:MaxDepth=4:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d4_t700",
+                      "!V:NTrees=700:BoostType=Grad:Shrinkage=0.30:MaxDepth=4:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );        
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d4_t750",
+                      "!V:NTrees=750:BoostType=Grad:Shrinkage=0.30:MaxDepth=4:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d4_t800",
+                      "!V:NTrees=800:BoostType=Grad:Shrinkage=0.30:MaxDepth=4:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=4:UseBaggedBoost:BaggedSampleFraction=0.5" );
+        */
     }
  
     // Multi-Layer Perceptron (Neural Network)
     if (useMLP)
     {
-        factory.BookMethod(dataloader, TMVA::Types::kMLP, "MLP",
-                           "!H:!V:NeuronType=tanh:VarTransform=N:NCycles=100:HiddenLayers=N+5:TestRate=5:!UseRegulator" );
+        factory.BookMethod(dataloader,TMVA::Types::kMLP, "MLP",
+                      "!H:!V:NeuronType=tanh:VarTransform=N:NCycles=100:HiddenLayers=N+5:TestRate=5:UseRegulator" );
     }
 
     // Deep Neural Network
@@ -165,8 +285,8 @@ void TMVA_VBF ( const char* outFileName )
 #endif
  
         // Define DNN layout
-        TString inputLayoutString = "InputLayout=1|1|7";
-        TString batchLayoutString= "BatchLayout=1|128|7";
+        TString inputLayoutString = "InputLayout=1|1|26";
+        TString batchLayoutString= "BatchLayout=1|128|26";
         TString layoutString ("Layout=DENSE|64|TANH,DENSE|64|TANH,DENSE|64|TANH,DENSE|64|TANH,DENSE|1|LINEAR");
         // Define Training strategies
         // one can catenate several training strategies
@@ -200,9 +320,10 @@ void TMVA_VBF ( const char* outFileName )
             dnnOptions += ":Architecture=CPU";
         }
  
-        factory.BookMethod(dataloader, TMVA::Types::kDNN, dnnMethodName, dnnOptions);
+        factory.BookMethod(dataloader,TMVA::Types::kDL, dnnMethodName, dnnOptions);
     }
  
+    /*
     // Keras deep learning
     if (useKeras) {
 
@@ -243,6 +364,7 @@ void TMVA_VBF ( const char* outFileName )
                                "GpuOptions=allow_growth=True"); // needed for RTX NVidia card and to avoid TF allocates all GPU memory
         }
     }
+    */
  
     /*
       ## Train Methods
@@ -258,8 +380,9 @@ void TMVA_VBF ( const char* outFileName )
     
     factory.TestAllMethods();
     factory.EvaluateAllMethods();
+    //cv.Evaluate();
  
     // after we get the ROC curve and we display
-    auto c1 = factory.GetROCCurve(dataloader);
-    c1->Draw();
+    // auto c1 = factory.GetROCCurve(dataloader);
+    // c1->Draw();
 }
