@@ -18,11 +18,11 @@ void TMVA_VBF ( const char* outFileName,
     bool useRandomSplitting = false; // option for cross validation
     bool useLikelihood = true;    // likelihood based discriminant
     bool useLikelihoodKDE = false;    // likelihood based discriminant
-    bool useFischer = false;       // Fischer discriminant
+    bool useFischer = true;       // Fischer discriminant
     bool useMLP = false;          // Multi Layer Perceptron (old TMVA NN implementation)
-    bool useBDT = false;           // Boosted Decision Tree
-    bool useBDTG = false;         // BDT with GradBoost
-    bool useDL = false;            // TMVA Deep Learning ( CPU or GPU)
+    bool useBDT = true;           // Boosted Decision Tree
+    bool useBDTG = true;         // BDT with GradBoost
+    bool useDL = true;            // TMVA Deep Learning ( CPU or GPU)
     // bool useKeras = false;        // Keras Deep learning
     
     // Open files
@@ -33,15 +33,13 @@ void TMVA_VBF ( const char* outFileName,
     TFile* bkgfile3;
     TFile* bkgfile4;
     if ( std::strcmp(channel, "phi") == 0 ) {
-        // fileformat = "/work/submit/kyoon/RareHiggs/data/cat_phi/cat_phi_VBF/outname_mc%d_VBFcat_PhiCat_2018.root";
-        fileformat = "/work/submit/mariadlf/JUNE7/2018/outname_mc%d_VBFcat_PhiCat_2018.root";
+        fileformat = "/work/submit/kyoon/RareHiggs/data/cat_phi/cat_phi_VBF/outname_mc%d_VBFcat_PhiCat_2018.root";
         sgnfile = TFile::Open(Form(fileformat, 1010), "READ");
     } else if ( std::strcmp(channel, "rho") == 0 ) {
-        // fileformat = "/work/submit/kyoon/RareHiggs/data/cat_rho/cat_rho_VBF/outname_mc%d_VBFcat_RhoCat_2018.root";
-        fileformat = "/work/submit/mariadlf/JUNE7/2018/outname_mc%d_VBFcat_RhoCat_2018.root";
+        fileformat = "/work/submit/kyoon/RareHiggs/data/cat_rho/cat_rho_VBF/outname_mc%d_VBFcat_RhoCat_2018.root";
         sgnfile = TFile::Open(Form(fileformat, 1020), "READ");
     }
-    // bkgfile1 = TFile::Open(Form(fileformat, 6), "READ");
+    bkgfile1 = TFile::Open(Form(fileformat, 6), "READ");
     bkgfile2 = TFile::Open(Form(fileformat, 7), "READ");
     bkgfile3 = TFile::Open(Form(fileformat, 8), "READ");
     bkgfile4 = TFile::Open(Form(fileformat, 9), "READ");
@@ -51,20 +49,25 @@ void TMVA_VBF ( const char* outFileName,
     TMVA::DataLoader *dataloader = new TMVA::DataLoader("dataset");
     
     // Add variables to dataset
-    dataloader->AddVariable("HCandMass", "HCandMass", "GeV/c^2", 'F'); // DON'T USE!!                 
-    dataloader->AddVariable("HCandPT", "HCandPT", "", 'F');
-    dataloader->AddVariable("HCandPT/HCandMass", "HCandPT__div_HCandMass", "", 'F');
-    dataloader->AddVariable("HCandPT/sqrt(HCandMass)", "HCandPT__div_sqrtHCandMass", "", 'F'); 
-    dataloader->AddVariable("goodPhotons_pt[index_pair[1]]", "goodPhotons_pt", "", 'F');           
-    dataloader->AddVariable("goodPhotons_pt[index_pair[1]]/HCandPT", "goodPhotons_pt__div_HCandPT", "", 'F');                                                                                                   
-    dataloader->AddVariable("goodPhotons_pt[index_pair[1]]/HCandMass", "goodPhotons_pt__div_HCandMass", 
-"", 'F');                                                                                               
-    dataloader->AddVariable("goodPhotons_pt[index_pair[1]]/sqrt(HCandMass)", "goodPhotons_pt__div_sqrtHCandMass", "", 'F');                                                                                     
-    dataloader->AddVariable("goodMeson_pt[index_pair[0]]", "goodMeson_pt", "", 'F');  
-    dataloader->AddVariable("goodMeson_pt[index_pair[0]]/HCandPT", "goodMeson_pt__div_HCandPT", "", 'F');                                                                                                       
-    dataloader->AddVariable("goodMeson_pt[index_pair[0]]/HCandMass", "goodMeson_pt__div_HCandMass", "", 'F');                                                                                                   
-    dataloader->AddVariable("goodMeson_pt[index_pair[0]]/sqrt(HCandMass)", "goodMeson_pt__div_sqrtHCandMass", "", 'F');
-    dataloader->AddVariable("goodMeson_DR[index_pair[0]]", "goodMeson_DR", "", 'F');
+    dataloader->AddVariable("HCandMass", "HCandMass", "GeV/c^2", 'F'); // DON'T USE!!                    
+    dataloader->AddVariable("HCandPT", "HCandPT", "", 'F');                     |                        
+    dataloader->AddVariable("HCandPT/HCandMass", "HCandPT__div_HCandMass", "", 'F'); // divide by HCandM\
+ass                                                                                                      
+    dataloader->AddVariable("HCandPT/sqrt(HCandMass)", "HCandPT__div_sqrtHCandMass", "", 'F');           
+    dataloader->AddVariable("goodPhotons_pt[index_pair[1]]", "goodPhotons_pt", "", 'F');                 
+    dataloader->AddVariable("goodPhotons_pt[index_pair[1]]/HCandPT", "goodPhotons_pt__div_HCandPT", "", \
+'F');                                                                                                    
+    dataloader->AddVariable("goodPhotons_pt[index_pair[1]]/HCandMass", "goodPhotons_pt__div_HCandMass", \
+"", 'F');                                                                                                
+    dataloader->AddVariable("goodPhotons_pt[index_pair[1]]/sqrt(HCandMass)", "goodPhotons_pt__div_sqrtHC\
+andMass", "", 'F');                                                                                      
+    dataloader->AddVariable("goodMeson_pt[index_pair[0]]", "goodMeson_pt", "", 'F');                     
+    dataloader->AddVariable("goodMeson_pt[index_pair[0]]/HCandPT", "goodMeson_pt__div_HCandPT", "", 'F')\
+;                                                                                                        
+    dataloader->AddVariable("goodMeson_pt[index_pair[0]]/HCandMass", "goodMeson_pt__div_HCandMass", "", \
+'F');                                                                                                    
+    dataloader->AddVariable("goodMeson_pt[index_pair[0]]/sqrt(HCandMass)", "goodMeson_pt__div_sqrtHCandM\
+ass", "", 'F');
     /*
     const char* idx0 = "events.index_pair[0]"; // Meson index
     const char* idx1 = "events.index_pair[1]"; // Photon index
@@ -103,7 +106,7 @@ void TMVA_VBF ( const char* outFileName,
     */
 
     // Set weights
-    // dataloader->SetWeightExpression("w");
+    dataloader->SetWeightExpression("w");
 
     // Spectator used for split
     // dataloader->AddSpectator("Entry$", "eventID");
@@ -131,12 +134,12 @@ void TMVA_VBF ( const char* outFileName,
     //dataloader->AddTree((TTree*)sgnfile->Get("events"), "Signal",
     //                    signalWeight, cutTestSignal, "test");
     dataloader->AddTree((TTree*)sgnfile->Get("events"), "Signal", signalWeight, cutSignalTrain, "train");
-    // dataloader->AddTree((TTree*)bkgfile1->Get("events"), "Background", backgroundWeight, cutBkgTrain, "train");
+    dataloader->AddTree((TTree*)bkgfile1->Get("events"), "Background", backgroundWeight, cutBkgTrain, "train");
     dataloader->AddTree((TTree*)bkgfile2->Get("events"), "Background", backgroundWeight, cutBkgTrain, "train");
     dataloader->AddTree((TTree*)bkgfile3->Get("events"), "Background", backgroundWeight, cutBkgTrain, "train");
     dataloader->AddTree((TTree*)bkgfile4->Get("events"), "Background", backgroundWeight, cutBkgTrain, "train");
     dataloader->AddTree((TTree*)sgnfile->Get("events"), "Signal", signalWeight, cutSignalTest, "test");
-    // dataloader->AddTree((TTree*)bkgfile1->Get("events"), "Background", backgroundWeight, cutBkgTest, "test");
+    dataloader->AddTree((TTree*)bkgfile1->Get("events"), "Background", backgroundWeight, cutBkgTest, "test");
     dataloader->AddTree((TTree*)bkgfile2->Get("events"), "Background", backgroundWeight, cutBkgTest, "test");
     dataloader->AddTree((TTree*)bkgfile3->Get("events"), "Background", backgroundWeight, cutBkgTest, "test");
     dataloader->AddTree((TTree*)bkgfile4->Get("events"), "Background", backgroundWeight, cutBkgTest, "test");
