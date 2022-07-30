@@ -33,12 +33,13 @@ void TMVA_VBF ( const char* outFileName,
     TFile* bkgfile3;
     TFile* bkgfile4;
     if ( std::strcmp(channel, "phi") == 0 ) {
-        // fileformat = "/work/submit/kyoon/RareHiggs/data/cat_phi/cat_phi_VBF/outname_mc%d_VBFcat_PhiCat_2018.root";
-        fileformat = "/work/submit/mariadlf/JUNE7/2018/outname_mc%d_VBFcat_PhiCat_2018.root";
+        //fileformat = "/work/submit/kyoon/RareHiggs/data/cat_phi/cat_phi_VBF/test/test_mc%d_VBFcat_PhiCat_2018.root";
+        fileformat = "/work/submit/kyoon/RareHiggs/data/cat_phi/cat_phi_VBFlow/test/test_mc%d_VBFcatlow_PhiCat_2018.root";
+        // fileformat = "/work/submit/mariadlf/JUNE7/2018/outname_mc%d_VBFcat_PhiCat_2018.root";
         sgnfile = TFile::Open(Form(fileformat, 1010), "READ");
     } else if ( std::strcmp(channel, "rho") == 0 ) {
-        // fileformat = "/work/submit/kyoon/RareHiggs/data/cat_rho/cat_rho_VBF/outname_mc%d_VBFcat_RhoCat_2018.root";
-        fileformat = "/work/submit/mariadlf/JUNE7/2018/outname_mc%d_VBFcat_RhoCat_2018.root";
+        fileformat = "/work/submit/kyoon/RareHiggs/data/cat_rho/cat_rho_VBFlow/test/test_mc%d_VBFcatlow_RhoCat_2018.root";
+        // fileformat = "/work/submit/mariadlf/JUNE7/2018/outname_mc%d_VBFcat_RhoCat_2018.root";
         sgnfile = TFile::Open(Form(fileformat, 1020), "READ");
     }
     // bkgfile1 = TFile::Open(Form(fileformat, 6), "READ");
@@ -51,71 +52,69 @@ void TMVA_VBF ( const char* outFileName,
     TMVA::DataLoader *dataloader = new TMVA::DataLoader("dataset");
     
     // Add variables to dataset
-    dataloader->AddVariable("HCandMass", "HCandMass", "GeV/c^2", 'F'); // DON'T USE!!                 
+    dataloader->AddVariable("HCandMass", "HCandMass", "GeV/c^2", 'F'); // DON'T USE!!
     dataloader->AddVariable("HCandPT", "HCandPT", "", 'F');
-    dataloader->AddVariable("HCandPT/HCandMass", "HCandPT__div_HCandMass", "", 'F');
-    dataloader->AddVariable("HCandPT/sqrt(HCandMass)", "HCandPT__div_sqrtHCandMass", "", 'F'); 
-    dataloader->AddVariable("goodPhotons_pt[index_pair[1]]", "goodPhotons_pt", "", 'F');           
-    dataloader->AddVariable("goodPhotons_pt[index_pair[1]]/HCandPT", "goodPhotons_pt__div_HCandPT", "", 'F');                                                                                                   
-    dataloader->AddVariable("goodPhotons_pt[index_pair[1]]/HCandMass", "goodPhotons_pt__div_HCandMass", 
-"", 'F');                                                                                               
-    dataloader->AddVariable("goodPhotons_pt[index_pair[1]]/sqrt(HCandMass)", "goodPhotons_pt__div_sqrtHCandMass", "", 'F');                                                                                     
-    dataloader->AddVariable("goodMeson_pt[index_pair[0]]", "goodMeson_pt", "", 'F');  
-    dataloader->AddVariable("goodMeson_pt[index_pair[0]]/HCandPT", "goodMeson_pt__div_HCandPT", "", 'F');                                                                                                       
-    dataloader->AddVariable("goodMeson_pt[index_pair[0]]/HCandMass", "goodMeson_pt__div_HCandMass", "", 'F');                                                                                                   
-    dataloader->AddVariable("goodMeson_pt[index_pair[0]]/sqrt(HCandMass)", "goodMeson_pt__div_sqrtHCandMass", "", 'F');
-    dataloader->AddVariable("goodMeson_DR[index_pair[0]]", "goodMeson_DR", "", 'F');
-    /*
-    const char* idx0 = "events.index_pair[0]"; // Meson index
-    const char* idx1 = "events.index_pair[1]"; // Photon index
-    // dataloader->AddVariable("HCandMass", "HCandMass", "", 'F'); // DON'T USE!!
-    dataloader->AddVariable("HCandPT", 'F');
-    dataloader->AddVariable("goodPhotons_pt__div_sqrtHCandMass", "goodPhotons_pt__div_sqrtHCandMass", "", 'F');
-    dataloader->AddVariable("goodPhotons_eta", "goodPhotons_eta", "", 'F');
-    dataloader->AddVariable("goodPhotons_mvaID", "goodPhotons_mvaID", "", 'F');
-    // dataloader->AddVariable(Form("goodPhotons_pfRelIso03_all[%s]", idx1), "goodPhotons_pfRelIso03_all", "", 'F');
-    //dataloader->AddVariable(Form("goodPhotons_hoe[%s]", idx1), "goodPhotons_hoe", "", 'F');
-    //dataloader->AddVariable(Form("goodPhotons_r9[%s]", idx1), "goodPhotons_r9", "", 'F');
-    //dataloader->AddVariable(Form("goodPhotons_sieie[%s]", idx1), "goodPhotons_sieie", "", 'F');
-    dataloader->AddVariable("SoftActivityJetNjets5", "SoftActivityJetNjets5", "", 'I');
-    dataloader->AddVariable("DeepMETResolutionTune_pt", "DeepMETResolutionTune_pt", "", 'F');
+    
+    //dataloader->AddVariable("HCandPT__div_HCandMass", "HCandPT__div_HCandMass", "", 'F'); // divide by HCandMass
+    //dataloader->AddVariable("HCandPT__div_sqrtHCandMass", "HCandPT__div_sqrtHCandMass", "", 'F');
+    //dataloader->AddVariable("goodPhotons_pt", "goodPhotons_pt", "", 'F');
+    dataloader->AddVariable("goodPhotons_pt__div_HCandPT", "goodPhotons_pt__div_HCandPT", "", 'F');
+    //dataloader->AddVariable("goodPhotons_pt__div_HCandMass", "goodPhotons_pt__div_HCandMass", "", 'F'); 
+    //dataloader->AddVariable("goodPhotons_pt__div_sqrtHCandMass", "goodPhotons_pt__div_sqrtHCandMass", "", 'F');
+
+    //dataloader->AddVariable("goodMeson_pt", "goodMeson_pt", "", 'F');
+    dataloader->AddVariable("goodMeson_pt__div_HCandPT", "goodMeson_pt__div_HCandPT", "", 'F');
+    //dataloader->AddVariable("goodMeson_pt__div_HCandMass", "goodMeson_pt__div_HCandMass", "", 'F'); 
+
+    //dataloader->AddVariable("goodMeson_pt__div_sqrtHCandMass", "goodMeson_pt__div_sqrtHCandMass", "", 'F');
+    //dataloader->AddVariable("goodMeson_DR", "goodMeson_DR", "", 'F');
+
     dataloader->AddVariable("goodMeson_DR__times_sqrtHCandMass", "goodMeson_DR__times_sqrtHCandMass", "", 'F');
-    dataloader->AddVariable("goodMeson_mass", "goodMeson_mass", "", 'F');
-    dataloader->AddVariable("goodMeson_pt__div_sqrtHCandMass", "goodMeson_pt__div_sqrtHCandMass", "", 'F');
+    
+    //dataloader->AddVariable("goodPhotons_eta", "goodPhotons_eta", "", 'F');
+    dataloader->AddVariable("goodPhotons_mvaID", "goodPhotons_mvaID", "", 'F');
+
+    dataloader->AddVariable("SoftActivityJetNjets5", "SoftActivityJetNjets5", "", 'F');
+
+    dataloader->AddVariable("DeepMETResolutionTune_pt", "DeepMETResolutionTune_pt", "GeV/c", 'F');
+    //dataloader->AddVariable("goodMeson_mass", "goodMeson_mass", "GeV/c^2", 'F');
     dataloader->AddVariable("goodMeson_iso", "goodMeson_iso", "", 'F');
-    // dataloader->AddVariable(Form("leadTrkPt := TMath::Max(goodMeson_trk1_pt[%s], goodMeson_trk2_pt[%s])", idx0, idx0), 'F');
-    // dataloader->AddVariable(Form("subLeadTrkPt := TMath::Min(goodMeson_trk1_pt[%s], goodMeson_trk2_pt[%s])", idx0, idx0), 'F');
-    // dataloader->AddVariable(Form("leadTrkEta := TMath::Max(goodMeson_trk1_eta[%s], goodMeson_trk2_eta[%s])", idx0, idx0), 'F');
-    // dataloader->AddVariable(Form("subLeadTrkEta := TMath::Min(goodMeson_trk1_eta[%s], goodMeson_trk2_eta[%s])", idx0, idx0), 'F');
-    dataloader->AddVariable("goodMeson_vtx_prob", "goodMeson_vtx_prob", "", 'F');
-    dataloader->AddVariable("goodMeson_massErr", "goodMeson_massErr", "", 'F');
-    dataloader->AddVariable("dPhiGammaMesonCand__div_sqrtHCandMass", "dPhiGammaMesonCand__div_sqrtHCandMass", "", 'F');
-    dataloader->AddVariable("dEtaGammaMesonCand__div_sqrtHCandMass", "dEtaGammaMesonCand__div_sqrtHCandMass", "", 'F');
-    dataloader->AddVariable("nGoodJets", "nGoodJets", "", 'F');
+    // dataloader->AddVariable("goodMeson_massErr", "goodMeson_massErr", "GeV/c^2", 'F'); too high corr
+    dataloader->AddVariable("goodMeson_sipPV", "goodMeson_sipPV", "", 'F');
+    
+    //dataloader->AddVariable("dPhiGammaMesonCand", "dPhiGammaMesonCand", "", 'F');
+    //dataloader->AddVariable("dEtaGammaMesonCand", "dEtaGammaMesonCand", "", 'F'); 
+    //dataloader->AddVariable("dPhiGammaMesonCand/HCandMass", "dPhiGammaMesonCand__div_HCandMass", "", 'F'); 
+    dataloader->AddVariable("dEtaGammaMesonCand/HCandMass", "dEtaGammaMesonCand__div_HCandMass", "", 'F'); 
+    dataloader->AddVariable("dPhiGammaMesonCand__div_sqrtHCandMass", "dPhiGammaMesonCand__div_sqrtHCandMass", "", 'F'); 
+    //dataloader->AddVariable("dEtaGammaMesonCand__div_sqrtHCandMass", "dEtaGammaMesonCand__div_sqrtHCandMass", "", 'F');
+    
+    // dataloader->AddVariable("nGoodJets", "nGoodJets", "", 'F'); too high corr
+    dataloader->AddVariable("sigmaHCandMass_Rel2", "sigmaHCandMass_Rel2", "", 'F');
+    dataloader->AddVariable("goodPhotons_energyErr", "goodPhotons_energyErr", "", 'F');
     dataloader->AddVariable("mJJ", "mJJ", "", 'F');
     dataloader->AddVariable("dEtaJJ", "dEtaJJ", "", 'F');
     dataloader->AddVariable("dPhiJJ", "dPhiJJ", "", 'F');
     dataloader->AddVariable("Y1Y2", "Y1Y2", "", 'F');
-    dataloader->AddVariable("deltaJetMeson", "deltaJetMeson", "", 'F');
-    dataloader->AddVariable("deltaJetPhoton", "deltaJetPhoton", "", 'F');
+    //dataloader->AddVariable("deltaJetMeson", "deltaJetMeson", "", 'F');
+    //dataloader->AddVariable("deltaJetPhoton", "deltaJetPhoton", "", 'F');
     dataloader->AddVariable("jet1Pt", "jet1Pt", "", 'F');
-    dataloader->AddVariable("jet2Pt", "jet2Pt", "", 'F');
-    */
+    //dataloader->AddVariable("jet2Pt", "jet2Pt", "", 'F');
 
     // Set weights
-    // dataloader->SetWeightExpression("w");
+    dataloader->SetWeightExpression("w");
 
     // Spectator used for split
     // dataloader->AddSpectator("Entry$", "eventID");
 
     // Apply split
     ////////////////////// TODO: use cross validation /////////////////////////
-    const char* trainTreeEventSplitStr = "Entry$ > 1"; //"(Entry$ % 10)>=5";
-    const char* testTreeEventSplitStr = "Entry$ == 1"; //"(Entry$ % 10)<5";
+    const char* trainTreeEventSplitStr = "(Entry$ % 3) >= 1"; //"(Entry$ % 10)>=5";
+    const char* testTreeEventSplitStr = "(Entry$ % 3) < 1"; //"(Entry$ % 10)<5";
     
     // Apply cuts
     const char* higgsMass = "HCandMass > 90 && HCandMass <= 170";
-    const char* nanRemove = "!TMath::IsNaN(goodMeson_massErr)";
+    const char* nanRemove = "!TMath::IsNaN(goodMeson_massErr) && !TMath::IsNaN(sigmaHCandMass_Rel2)";
     
     TCut cutSignalTrain = Form("%s && %s && %s", trainTreeEventSplitStr, higgsMass, nanRemove);
     TCut cutBkgTrain = Form("%s && %s && %s", trainTreeEventSplitStr, higgsMass, nanRemove);
@@ -133,13 +132,14 @@ void TMVA_VBF ( const char* outFileName,
     dataloader->AddTree((TTree*)sgnfile->Get("events"), "Signal", signalWeight, cutSignalTrain, "train");
     // dataloader->AddTree((TTree*)bkgfile1->Get("events"), "Background", backgroundWeight, cutBkgTrain, "train");
     dataloader->AddTree((TTree*)bkgfile2->Get("events"), "Background", backgroundWeight, cutBkgTrain, "train");
-    dataloader->AddTree((TTree*)bkgfile3->Get("events"), "Background", backgroundWeight, cutBkgTrain, "train");
-    dataloader->AddTree((TTree*)bkgfile4->Get("events"), "Background", backgroundWeight, cutBkgTrain, "train");
+    //dataloader->AddTree((TTree*)bkgfile3->Get("events"), "Background", backgroundWeight, cutBkgTrain, "train");
+    //dataloader->AddTree((TTree*)bkgfile4->Get("events"), "Background", backgroundWeight, cutBkgTrain, "train");
+    
     dataloader->AddTree((TTree*)sgnfile->Get("events"), "Signal", signalWeight, cutSignalTest, "test");
     // dataloader->AddTree((TTree*)bkgfile1->Get("events"), "Background", backgroundWeight, cutBkgTest, "test");
     dataloader->AddTree((TTree*)bkgfile2->Get("events"), "Background", backgroundWeight, cutBkgTest, "test");
-    dataloader->AddTree((TTree*)bkgfile3->Get("events"), "Background", backgroundWeight, cutBkgTest, "test");
-    dataloader->AddTree((TTree*)bkgfile4->Get("events"), "Background", backgroundWeight, cutBkgTest, "test");
+    //dataloader->AddTree((TTree*)bkgfile3->Get("events"), "Background", backgroundWeight, cutBkgTest, "test");
+    //dataloader->AddTree((TTree*)bkgfile4->Get("events"), "Background", backgroundWeight, cutBkgTest, "test");
     /*
     dataloader->PrepareTrainingAndTestTree(cutSignal, cutBkg,
                                            "nTrain_Signal=-1"
@@ -304,8 +304,8 @@ void TMVA_VBF ( const char* outFileName,
 #endif
  
         // Define DNN layout
-        TString inputLayoutString = "InputLayout=1|1|23";
-        TString batchLayoutString= "BatchLayout=1|128|23";
+        TString inputLayoutString = "InputLayout=1|1|18";
+        TString batchLayoutString= "BatchLayout=1|128|18";
         TString layoutString ("Layout=DENSE|64|TANH,DENSE|64|TANH,DENSE|64|TANH,DENSE|64|TANH,DENSE|1|LINEAR");
         // Define Training strategies
         // one can catenate several training strategies
