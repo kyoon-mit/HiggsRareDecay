@@ -1,0 +1,18 @@
+##### Emacs #####
+*~
+\#*\#
+.\#*
+
+##### C++ #####
+*.so
+*.d
+*.pcm
+
+##### Others #####
+*.jpg
+*.jpeg
+*.root
+*.txt
+
+##### Except #####
+!datacards/*.txt
