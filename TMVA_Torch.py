@@ -8,6 +8,9 @@ from torch import nn
 import importlib
 disco = importlib.import_module('Disco')
 
+global LEARNING_RATE
+LEARNING_RATE = 0.001
+
 ##########################################
 ############# Loss Function ##############
 ##########################################
@@ -35,25 +38,33 @@ def disco_loss(y_pred, y_true, mass_tensor=[], weight_tensor=[], penalty_rate=0.
 class Net(nn.Module):
     def __init__(self, input_shape):
         super(Net, self).__init__()
-        hidden_nodes_dim = input_shape*2
-        self.linear_relu_stack = nn.Sequential(
+        hidden_nodes_dim = input_shape*4
+        self.linear_stack = nn.Sequential(
             nn.Linear(input_shape, hidden_nodes_dim),
             nn.ReLU(),
+            nn.Sigmoid(),
             nn.Linear(hidden_nodes_dim, hidden_nodes_dim),
             nn.ReLU(),
-            nn.Linear(hidden_nodes_dim, 1),
-            nn.Sigmoid()
+            nn.Linear(hidden_nodes_dim, 2),
+            #nn.Sigmoid(),
+            #nn.Linear(hidden_nodes_dim, hidden_nodes_dim),
+            #nn.Sigmoid(),
+            #nn.Linear(hidden_nodes_dim, hidden_nodes_dim),
+            #nn.Sigmoid(),
+            #nn.Linear(hidden_nodes_dim, 1),
+            #nn.Tanh()
+            nn.Softmax(dim=1),
         )
     def forward(self, x):
-        logits = self.linear_relu_stack(x)
+        logits = self.linear_stack(x)
         return logits
  
 # Define train function
 def train(model, train_loader, val_loader, num_epochs, batch_size, optimizer, criterion, save_best, scheduler):
-    trainer = optimizer(model.parameters(), lr=0.01)
+    trainer = optimizer(model.parameters(), lr=LEARNING_RATE)
     schedule, schedulerSteps = scheduler
     best_val = None
-    disco_lambda = 0.1
+    disco_lambda = 0.
     
     for epoch in range(num_epochs):
         # Training Loop
@@ -68,9 +79,9 @@ def train(model, train_loader, val_loader, num_epochs, batch_size, optimizer, cr
             y_signal = y[:,0].unsqueeze(1)
             # bkg = y[:,1]
             output = model(X[:,2:])
-            # train_loss = criterion(output, y)
+            train_loss = criterion(output, y)#y_signal)
             # disco_loss(y_pred, y_true, mass_tensor=[], weight_tensor=[], penalty_rate=0.1)
-            train_loss = criterion(output, y_signal, HCandMass, weights, disco_lambda)
+            # train_loss = criterion(output, y_signal, HCandMass, weights, disco_lambda)
             train_loss.backward()
             trainer.step()
  
@@ -93,8 +104,8 @@ def train(model, train_loader, val_loader, num_epochs, batch_size, optimizer, cr
                 y_signal = y[:,0].unsqueeze(1)
                 # bkg = y[:,1]
                 output = model(X[:,2:])
-                # val_loss = criterion(output, y)
-                val_loss = criterion(output, y_signal, HCandMass, weights, disco_lambda)
+                val_loss = criterion(output, y)#y_signal)
+                # val_loss = criterion(output, y_signal, HCandMass, weights, disco_lambda)
                 running_val_loss += val_loss.item() 
             curr_val = running_val_loss / len(val_loader)
             if save_best:
@@ -120,9 +131,10 @@ def predict(model, test_X, batch_size=32):
     predictions = []
     with torch.no_grad():
         for i, data in enumerate(test_loader):
-            X = data[0]
-            outputs = model(X[:,2:])
-            predictions.append(outputs)
+            for j in range(len(data)):
+                X = data[j]
+                outputs = model(X[:,2:])
+                predictions.append(outputs)
         preds = torch.cat(predictions)
  
     return preds.numpy()
@@ -131,7 +143,11 @@ def predict(model, test_X, batch_size=32):
 ############# TMVA Loading ###############
 ##########################################
 
-def load_data(cat='ggH', meson='rho', year=[2018], sgn_mc=[1027], bkg_mc=[6,7,8,9,10]): # TODO: move to utils module
+def load_data(cat='ggH',
+              meson='rho',
+              year=[2018],
+              sgn_mc=[1027],
+              bkg_mc=[10,11,12,13,14]): # TODO: move to utils module
     """
     Helper function to load data into TMVA.
     
@@ -141,7 +157,6 @@ def load_data(cat='ggH', meson='rho', year=[2018], sgn_mc=[1027], bkg_mc=[6,7,8,
     year: (list) year of the data/MC taken/produced
     sgn_mc: (list) MC number(s) of the signal process; - for data
     bkg_mc: (list) MC number(s) of the background process; - for data
-
     Returns
     (list of signal TFiles, list of background TFiles)
     """
@@ -158,11 +173,12 @@ def load_data(cat='ggH', meson='rho', year=[2018], sgn_mc=[1027], bkg_mc=[6,7,8,
         for mc_ in bkg_mc:
             f = TFile.Open(file_format.format(**{'yr':yr_, 'mc':mc_, 'cat':cat, 'meson':meson}), 'READ')
             background_files.append(f)
+
     return signal_files, background_files
 
-def add_files_to_dataloader(signal_files, background_files, dataloader,
-                            cut_train='',
-                            cut_test='',
+def add_files_to_dataloader(signal_files,
+                            background_files,
+                            dataloader,
                             signal_weight=1,
                             background_weight=1):
     """
@@ -170,16 +186,16 @@ def add_files_to_dataloader(signal_files, background_files, dataloader,
     """
 
     for sgn_file in signal_files:
-        dataloader.AddTree(sgn_file.events, 'Signal', signal_weight, cut_train, 'train')
-        dataloader.AddTree(sgn_file.events, 'Signal', signal_weight, cut_test, 'test')
+        sgn_tree = sgn_file.Get('events')
+        dataloader.AddSignalTree(sgn_tree, signal_weight)
     for bkg_file in background_files:
-        dataloader.AddTree(bkg_file.events, 'Background', background_weight, cut_train, 'train')
-        dataloader.AddTree(bkg_file.events, 'Background', background_weight, cut_test, 'test')
+        bkg_tree = bkg_file.Get('events')
+        dataloader.AddBackgroundTree(bkg_tree, background_weight)
 
 ##########################################
 ############## Script part ###############
 ##########################################
-        
+
 # Setup TMVA
 TMVA.Tools.Instance()
 TMVA.PyMethodBase.PyInitialize()
@@ -189,36 +205,48 @@ factory = TMVA.Factory('TMVAClassification', output,
                        '!V:!Silent:Color:DrawProgressBar:Transformations=D,G:AnalysisType=Classification')
 
 # Setup dataloader
+dataloader = TMVA.DataLoader('dataset')
 features = ['HCandMass', 'w', # It is crucial to keep these two variables in indices 0 and 1
             'HCandPT',
             'goodPhotons_pt',
-            'goodMeson_iso']
+            'goodPhotons_eta',
+            'goodPhotons_mvaID',
+            'goodMeson_pt',
+            'goodMeson_iso',
+            'goodMeson_DR',
+            'goodMeson_mass',
+            'dPhiGammaMesonCand',
+            'dEtaGammaMesonCand',
+            'nGoodJets']
 
-dataloader = TMVA.DataLoader('dataset')
 for feature in features:
     dataloader.AddVariable(feature)
+#dataloader.SetWeightExpression('w')
 
 # Define splits and cuts
-split_train = '(Entry$ % 3) > 0'
-split_test = '(Entry$ % 3) == 0'
+#split_train = '(Entry$ % 3) < 2'
+#split_test = '(Entry$ % 3) == 2'
 
-higgs_mass_window = 'HCandMass > 115 && HCandMass < 135'
-# nan_remove = ''
+higgs_mass_window = 'HCandMass > 110 && HCandMass < 140'
+nan_remove = ' && '.join(['!TMath::IsNaN({})'.format(var) for var in features])
 
-cut_train = ' && '.join((split_train, higgs_mass_window))
-cut_test = ' && '.join((split_test, higgs_mass_window))
-
-print(cut_train)
+cut_signal = ' && '.join((higgs_mass_window, nan_remove))
+cut_background = ' && '.join((higgs_mass_window, nan_remove))
 
 # Load data
 s, b = load_data()
-add_files_to_dataloader(s, b, dataloader, cut_train, cut_test)
+add_files_to_dataloader(s, b, dataloader)
+dataloader.PrepareTrainingAndTestTree(cut_signal,
+                                      cut_background,
+                                      'nTrain_Signal=700:nTrain_Background=700:'
+                                      'nTest_Signal=300:nTest_Background=300:'
+                                      'SplitMode=Random:NormMode=NumEvents:!V')
 
 # Construct loss function and optimizer
-loss = torch.nn.MSELoss()
-optimizer = torch.optim.SGD
+loss = torch.nn.BCEWithLogitsLoss()
+optimizer = torch.optim.Adam
 
-load_model_custom_objects = {"optimizer": optimizer, "criterion": disco_loss,
+load_model_custom_objects = {"optimizer": optimizer, "criterion": loss, #disco_loss,
                              "train_func": train, "predict_func": predict}
 
 # Create the model
@@ -231,12 +259,12 @@ print(m)
 # Book methods
 # TODO: Compare with BDTG
 
-torch_method_VarTransform_string =\
-    'N(' + ','.join([f'_V{i}_' for i in range(2, len(features))]) + ')'
+vars_for_transform = ','.join([f'_V{i}_' for i in range(2, len(features))])
+torch_method_VarTransform_string = 'G({0})'.format(vars_for_transform)
 factory.BookMethod(dataloader, TMVA.Types.kPyTorch, 'PyTorch',
-                   'H:!V:VarTransform=' + torch_method_VarTransform_string + 
+                   'H:!V:VarTransform=' + torch_method_VarTransform_string +
                    ':FilenameModel=modelClassification.pt:'
-                   'FilenameTrainedModel=trainedModelClassification.pt:NumEpochs=40:BatchSize=128') 
+                   'FilenameTrainedModel=trainedModelClassification.pt:NumEpochs=2:BatchSize=64') 
 
 # Train, test, and evaluate
 factory.TrainAllMethods()
