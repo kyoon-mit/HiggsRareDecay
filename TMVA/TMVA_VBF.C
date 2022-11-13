@@ -21,7 +21,8 @@ void TMVA_VBF ( const char* outFileName,
     bool useFischer = false;       // Fischer discriminant
     bool useMLP = false;          // Multi Layer Perceptron (old TMVA NN implementation)
     bool useBDT = false;           // Boosted Decision Tree
-    bool useBDTG = true;         // BDT with GradBoost
+    bool useTorch = true;
+    bool useBDTG = false;         // BDT with GradBoost
     bool useDL = false;            // TMVA Deep Learning ( CPU or GPU)
     // bool useKeras = false;        // Keras Deep learning
     
@@ -51,7 +52,7 @@ void TMVA_VBF ( const char* outFileName,
     TMVA::DataLoader *dataloader = new TMVA::DataLoader("dataset");
     
     // Add variables to dataset
-    // dataloader->AddVariable("HCandMass", "HCandMass", "GeV/c^2", 'F'); // DON'T USE!!
+    dataloader->AddVariable("HCandMass", "HCandMass", "GeV/c^2", 'F'); // DON'T USE!!
     
     dataloader->AddVariable("HCandPT", "HCandPT", "", 'F');    
     // dataloader->AddVariable("HCandPT__div_HCandMass", "HCandPT__div_HCandMass", "", 'F'); // divide by HCandMass
@@ -64,7 +65,7 @@ void TMVA_VBF ( const char* outFileName,
     // dataloader->AddVariable("goodMeson_pt", "goodMeson_pt", "", 'F');
     // dataloader->AddVariable("goodMeson_pt__div_HCandPT", "goodMeson_pt__div_HCandPT", "", 'F');
     // dataloader->AddVariable("goodMeson_pt__div_HCandMass", "goodMeson_pt__div_HCandMass", "", 'F'); 
-    dataloader->AddVariable("goodMeson_pt__div_sqrtHCandMass", "goodMeson_pt__div_sqrtHCandMass", "", 'F');
+    // dataloader->AddVariable("goodMeson_pt__div_sqrtHCandMass", "goodMeson_pt__div_sqrtHCandMass", "", 'F');
     // dataloader->AddVariable("goodMeson_DR", "goodMeson_DR", "", 'F');
     // dataloader->AddVariable("goodMeson_DR * HCandMass", "goodMeson_DR__times_HCandMass", "", 'F');
     // dataloader->AddVariable("goodMeson_DR__times_sqrtHCandMass", "goodMeson_DR__times_sqrtHCandMass", "", 'F');
@@ -73,16 +74,16 @@ void TMVA_VBF ( const char* outFileName,
     // dataloader->AddVariable("goodPhotons_mvaID", "goodPhotons_mvaID", "", 'F');
     // dataloader->AddVariable("SoftActivityJetNjets5", "SoftActivityJetNjets5", "", 'F');
     // dataloader->AddVariable("DeepMETResolutionTune_pt", "DeepMETResolutionTune_pt", "GeV/c", 'F'); // high corr in VBF phi
-    dataloader->AddVariable("goodMeson_mass", "goodMeson_mass", "GeV/c^2", 'F');
+    // dataloader->AddVariable("goodMeson_mass", "goodMeson_mass", "GeV/c^2", 'F');
     // dataloader->AddVariable("goodMeson_massUnfit", "goodMeson_massUnfit", "GeV/c^2", 'F');
     dataloader->AddVariable("goodMeson_iso", "goodMeson_iso", "", 'F');
     // dataloader->AddVariable("goodMeson_vtx_chi2dof", "goodMeson_vtx_chi2dof", "", 'F');
     // dataloader->AddVariable("goodMeson_vtx_prob", "goodMeson_vtx_prob", "", 'F');
     // dataloader->AddVariable("goodMeson_massErr", "goodMeson_massErr", "GeV/c^2", 'F');
-    dataloader->AddVariable("goodMeson_sipPV", "goodMeson_sipPV", "", 'F');
+    // dataloader->AddVariable("goodMeson_sipPV", "goodMeson_sipPV", "", 'F');
     // dataloader->AddVariable("goodMeson_trk1_pt", "goodMeson_trk1_pt", "", 'F');
     // dataloader->AddVariable("goodMeson_trk2_pt", "goodMeson_trk2_pt", "", 'F');
-    dataloader->AddVariable("goodMeson_trk1_eta", "goodMeson_trk1_eta", "", 'F');
+    // dataloader->AddVariable("goodMeson_trk1_eta", "goodMeson_trk1_eta", "", 'F');
     // dataloader->AddVariable("goodMeson_trk2_eta", "goodMeson_trk2_eta", "", 'F');
     
     // dataloader->AddVariable("dPhiGammaMesonCand", "dPhiGammaMesonCand", "", 'F');
@@ -92,19 +93,19 @@ void TMVA_VBF ( const char* outFileName,
     // dataloader->AddVariable("dPhiGammaMesonCand__div_sqrtHCandMass", "dPhiGammaMesonCand__div_sqrtHCandMass", "", 'F'); 
     // dataloader->AddVariable("dEtaGammaMesonCand__div_sqrtHCandMass", "dEtaGammaMesonCand__div_sqrtHCandMass", "", 'F');
     
-    dataloader->AddVariable("nGoodJets", "nGoodJets", "", 'F'); // high corr in VBF phi, VBFlow phi
+    // dataloader->AddVariable("nGoodJets", "nGoodJets", "", 'F'); // high corr in VBF phi, VBFlow phi
     // dataloader->AddVariable("sigmaHCandMass_Rel2", "sigmaHCandMass_Rel2", "", 'F');
     // dataloader->AddVariable("goodPhotons_energyErr", "goodPhotons_energyErr", "", 'F');
 
     // dataloader->AddVariable("mJJ", "mJJ", "", 'F');
-    dataloader->AddVariable("dEtaJJ", "dEtaJJ", "", 'F'); // corr with mJJ
-    dataloader->AddVariable("dPhiJJ", "dPhiJJ", "", 'F'); // high corr in VBF phi
+    // dataloader->AddVariable("dEtaJJ", "dEtaJJ", "", 'F'); // corr with mJJ
+    // dataloader->AddVariable("dPhiJJ", "dPhiJJ", "", 'F'); // high corr in VBF phi
     // dataloader->AddVariable("Y1Y2", "Y1Y2", "", 'F');
     // dataloader->AddVariable("deltaJetMeson", "deltaJetMeson", "", 'F');
     // dataloader->AddVariable("deltaJetPhoton", "deltaJetPhoton", "", 'F'); // high corr in VBF phi
-    dataloader->AddVariable("jet1Pt", "jet1Pt", "", 'F');
-    dataloader->AddVariable("jet2Pt", "jet2Pt", "", 'F'); // high corr in VBFlow phi
-    dataloader->AddVariable("jet1Eta", "jet1Eta", "", 'F');
+    // dataloader->AddVariable("jet1Pt", "jet1Pt", "", 'F');
+    // dataloader->AddVariable("jet2Pt", "jet2Pt", "", 'F'); // high corr in VBFlow phi
+    // dataloader->AddVariable("jet1Eta", "jet1Eta", "", 'F');
     // dataloader->AddVariable("jet2Eta", "jet2Eta", "", 'F');
     // dataloader->AddVariable("jet1hfsigmaPhiPhi", "jet1hfsigmaPhiPhi", "", 'F');
     // dataloader->AddVariable("jet2hfsigmaPhiPhi", "jet2hfsigmaPhiPhi", "", 'F');
@@ -204,12 +205,12 @@ void TMVA_VBF ( const char* outFileName,
         factory.BookMethod(dataloader,TMVA::Types::kLikelihood, "Likelihood",
                       "H:!V:TransformOutput:PDFInterpol=Spline2:NSmoothSig[0]=20:NSmoothBkg[0]=20:NSmoothBkg[1]=10:NSmooth=1:NAvEvtPerBin=50" );
     }
+    
     // Use a kernel density estimator to approximate the PDFs
     if (useLikelihoodKDE)
     {
         factory.BookMethod(dataloader,TMVA::Types::kLikelihood, "LikelihoodKDE",
                       "!H:!V:!TransformOutput:PDFInterpol=KDE:KDEtype=Gauss:KDEiter=Adaptive:KDEFineFactor=0.3:KDEborder=None:NAvEvtPerBin=50" );
- 
     }
  
     // Fisher discriminant (same as LD)
@@ -237,6 +238,12 @@ void TMVA_VBF ( const char* outFileName,
         factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d4",
                            "!V:NTrees=90:BoostType=Grad:Shrinkage=0.1:MaxDepth=4:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=9:UseBaggedBoost:BaggedSampleFraction=0.3:PruneMethod=CostComplexity:PruneStrength=100" );
         */
+    }
+
+    if (useTorch)
+    {
+        factory.BookMethod(dataloader,TMVA::Types::kPyTorch, "PyTorch",
+                      "H:!V:VarTransform=None:FilenameModel=torch_TMVA_testmodel.pt:FilenameTrainedModel=torch_TMVA_test_trained.pt:NumEpochs=5:BatchSize=64" );
     }
  
     // Multi-Layer Perceptron (Neural Network)
