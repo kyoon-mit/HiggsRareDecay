@@ -8,8 +8,9 @@ from torch import nn
 import importlib
 disco = importlib.import_module('Disco')
 
-global LEARNING_RATE
+global LEARNING_RATE, DISCO_LAMBDA
 LEARNING_RATE = 0.001
+DISCO_LAMBDA = 0.1
 
 ##########################################
 ############# Loss Function ##############
@@ -18,11 +19,12 @@ LEARNING_RATE = 0.001
 # Decorrelation
 def disco_loss(y_pred, y_true, mass_tensor=[], weight_tensor=[], penalty_rate=0.1):
     loss_term = nn.functional.binary_cross_entropy_with_logits(y_pred, y_true)
-    bkg_indices = (y_true < 0.001).nonzero(as_tuple=True)[0] # CHECK HOW LABELS ARE DEFINED!!
+    y_signal = y_true[:,0]
+    bkg_indices = (y_signal < 0.001).nonzero(as_tuple=True)[0] # CHECK HOW LABELS ARE DEFINED!!
     if len(bkg_indices) <= 2:
         return loss_term
     else:
-        bkg_y_pred = y_pred[bkg_indices]
+        bkg_y_pred = y_pred[:,0][bkg_indices]
         bkg_masses = mass_tensor[bkg_indices]
         bkg_weights = weight_tensor
         if torch.is_tensor(weight_tensor):
@@ -42,7 +44,6 @@ class Net(nn.Module):
         self.linear_stack = nn.Sequential(
             nn.Linear(input_shape, hidden_nodes_dim),
             nn.ReLU(),
-            nn.Sigmoid(),
             nn.Linear(hidden_nodes_dim, hidden_nodes_dim),
             nn.ReLU(),
             nn.Linear(hidden_nodes_dim, 2),
@@ -64,7 +65,7 @@ def train(model, train_loader, val_loader, num_epochs, batch_size, optimizer, cr
     trainer = optimizer(model.parameters(), lr=LEARNING_RATE)
     schedule, schedulerSteps = scheduler
     best_val = None
-    disco_lambda = 0.
+    disco_lambda = DISCO_LAMBDA
     
     for epoch in range(num_epochs):
         # Training Loop
@@ -76,12 +77,10 @@ def train(model, train_loader, val_loader, num_epochs, batch_size, optimizer, cr
             trainer.zero_grad()
             HCandMass = X[:,0].unsqueeze(1)
             weights = X[:,1].unsqueeze(1)
-            y_signal = y[:,0].unsqueeze(1)
-            # bkg = y[:,1]
             output = model(X[:,2:])
-            train_loss = criterion(output, y)#y_signal)
+            #train_loss = criterion(output, y)
             # disco_loss(y_pred, y_true, mass_tensor=[], weight_tensor=[], penalty_rate=0.1)
-            # train_loss = criterion(output, y_signal, HCandMass, weights, disco_lambda)
+            train_loss = criterion(output, y, HCandMass, weights, disco_lambda)
             train_loss.backward()
             trainer.step()
  
@@ -101,12 +100,11 @@ def train(model, train_loader, val_loader, num_epochs, batch_size, optimizer, cr
             for i, (X, y) in enumerate(val_loader):
                 HCandMass = X[:,0].unsqueeze(1)
                 weights = X[:,1].unsqueeze(1)
-                y_signal = y[:,0].unsqueeze(1)
-                # bkg = y[:,1]
                 output = model(X[:,2:])
-                val_loss = criterion(output, y)#y_signal)
-                # val_loss = criterion(output, y_signal, HCandMass, weights, disco_lambda)
-                running_val_loss += val_loss.item() 
+                print(torch.round(output))
+                #val_loss = criterion(output, y)                
+                val_loss = criterion(output, y, HCandMass, weights, disco_lambda)
+                running_val_loss += val_loss.item()
             curr_val = running_val_loss / len(val_loader)
             if save_best:
                if best_val==None:
@@ -227,7 +225,7 @@ for feature in features:
 #split_train = '(Entry$ % 3) < 2'
 #split_test = '(Entry$ % 3) == 2'
 
-higgs_mass_window = 'HCandMass > 110 && HCandMass < 140'
+higgs_mass_window = 'HCandMass > 90 && HCandMass < 170'
 nan_remove = ' && '.join(['!TMath::IsNaN({})'.format(var) for var in features])
 
 cut_signal = ' && '.join((higgs_mass_window, nan_remove))
@@ -238,15 +236,15 @@ s, b = load_data()
 add_files_to_dataloader(s, b, dataloader)
 dataloader.PrepareTrainingAndTestTree(cut_signal,
                                       cut_background,
-                                      'nTrain_Signal=700:nTrain_Background=700:'
-                                      'nTest_Signal=300:nTest_Background=300:'
-                                      'SplitMode=Random:NormMode=NumEvents:!V')
+                                      'nTrain_Signal=25000:nTrain_Background=25000:'
+                                      'nTest_Signal=5000:nTest_Background=5000:'
+                                      'SplitMode=Alternate:MixMode=Random:NormMode=NumEvents:!V')
 
 # Construct loss function and optimizer
 loss = torch.nn.BCEWithLogitsLoss()
 optimizer = torch.optim.Adam
 
-load_model_custom_objects = {"optimizer": optimizer, "criterion": loss, #disco_loss,
+load_model_custom_objects = {"optimizer": optimizer, "criterion": disco_loss,
                              "train_func": train, "predict_func": predict}
 
 # Create the model
@@ -260,17 +258,22 @@ print(m)
 # TODO: Compare with BDTG
 
 vars_for_transform = ','.join([f'_V{i}_' for i in range(2, len(features))])
-torch_method_VarTransform_string = 'G({0})'.format(vars_for_transform)
+torch_method_VarTransform_string = 'D+G({0})'.format(vars_for_transform)
 factory.BookMethod(dataloader, TMVA.Types.kPyTorch, 'PyTorch',
                    'H:!V:VarTransform=' + torch_method_VarTransform_string +
                    ':FilenameModel=modelClassification.pt:'
-                   'FilenameTrainedModel=trainedModelClassification.pt:NumEpochs=2:BatchSize=64') 
+                   'FilenameTrainedModel=trainedModelClassification.pt:NumEpochs=40:BatchSize=64') 
 
 # Train, test, and evaluate
 factory.TrainAllMethods()
 factory.TestAllMethods()
 factory.EvaluateAllMethods() 
- 
+
+# Convert model to onnx file
+model = torch.jit.load("trainedModelClassification.pt")
+xinput = torch.zeros((1,11))   # define input shape (assume batch size = 1)
+torch.onnx.export(model,xinput,"trainedModelClassification.onnx",export_params=True)
+
 # Plot ROC Curves
 roc = factory.GetROCCurve(dataloader)
 roc.SaveAs('ROC_ClassificationPyTorch.png')
