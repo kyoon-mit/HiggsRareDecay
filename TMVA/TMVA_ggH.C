@@ -19,12 +19,12 @@ void TMVA_ggH ( const char* outFileName,
     
     // options to control used methods
     bool useRandomSplitting = false; // option for cross validation
-    bool useLikelihood = true;    // likelihood based discriminant
+    bool useLikelihood = false;    // likelihood based discriminant
     bool useLikelihoodKDE = false;    // likelihood based discriminant
     bool useFischer = false;       // Fischer discriminant
     bool useMLP = false;          // Multi Layer Perceptron (old TMVA NN implementation)
     bool useBDT = false;           // Boosted Decision Tree (AdaBoost)
-    bool useBDTG = true;         // BDT with GradBoost
+    bool useBDTG = false;         // BDT with GradBoost
     bool useDL = false;           // TMVA Deep Learning ( CPU or GPU)
     // bool useKeras = false;        // Keras Deep learning
     
@@ -37,12 +37,12 @@ void TMVA_ggH ( const char* outFileName,
     TFile* bkgfile4;
     TFile* bkgfile5;
     if ( std::strcmp(channel, "phi") == 0 ) {
-        fileformat = "/work/submit/kyoon/RareHiggs/data/cat_phi/cat_phi_ggH/test/test_mc%d_ggHcat_phicat_2018.root";
-        // fileformat = "/work/submit/mariadlf/JUNE7/2018/outname_mc%d_GFcat_PhiCat_2018.root";
+        // fileformat = "/work/submit/kyoon/RareHiggs/data/cat_phi/cat_phi_ggH/test/test_mc%d_ggHcat_phicat_2018.root";
+        fileformat = "/work/submit/mariadlf/Hrare/SEPT24/2018/outname_mc%d_GFcat_PhiCat_2018.root";
         sgnfile = TFile::Open(Form(fileformat, 1017), "READ");
     } else if ( std::strcmp(channel, "rho") == 0 ) {
-        fileformat = "/work/submit/kyoon/RareHiggs/data/cat_rho/cat_rho_ggH/test/test_mc%d_ggHcat_rhocat_2018.root";
-        // fileformat = "/work/submit/mariadlf/JUNE7/2018/outname_mc%d_GFcat_RhoCat_2018.root";
+        // fileformat = "/work/submit/kyoon/RareHiggs/data/cat_rho/cat_rho_ggH/test/test_mc%d_ggHcat_rhocat_2018.root";
+        fileformat = "/work/submit/mariadlf/Hrare/SEPT24/2018/outname_mc%d_GFcat_RhoCat_2018.root";
         sgnfile = TFile::Open(Form(fileformat, 1027), "READ");
     }
     bkgfile1 = TFile::Open(Form(fileformat, 10), "READ");
@@ -50,9 +50,6 @@ void TMVA_ggH ( const char* outFileName,
     bkgfile3 = TFile::Open(Form(fileformat, 12), "READ");
     bkgfile4 = TFile::Open(Form(fileformat, 13), "READ");
     bkgfile5 = TFile::Open(Form(fileformat, 14), "READ");
-
-    // TFile* sgnfile = TFile::Open("/work/submit/kyoon/RareHiggs/data/cat_rho/cat_rho_ggH/test/test_signal_GFcat_RhoCat_2018.root");
-    // TFile* bkgfile = TFile::Open("/work/submit/kyoon/RareHiggs/data/cat_rho/cat_rho_ggH/test/test_background_GFcat_RhoCat_2018.root");
     
     // Initialize the dataset
     TFile* outfile = TFile::Open(outFileName, "RECREATE");    
@@ -62,66 +59,43 @@ void TMVA_ggH ( const char* outFileName,
     const char* idx0 = "index_pair[0]"; // Meson index
     const char* idx1 = "index_pair[1]"; // Photon index
 
-    // dataloader->AddVariable("HCandMass", "HCandMass", "GeV/c^2", 'F'); // DON'T USE!
+    dataloader->AddVariable("HCandMass", "HCandMass", "GeV/c^2", 'F'); // DON'T USE!
 
-    dataloader->AddVariable("HCandPT", "HCandPT", "", 'F');
-    // dataloader->AddVariable("HCandPT__div_HCandMass", "HCandPT__div_HCandMass", "", 'F');
+    /// dataloader->AddVariable("HCandPT", "HCandPT", "", 'F');
+    dataloader->AddVariable("HCandPT/HCandMass", "HCandPT__div_HCandMass", "", 'F');
     // dataloader->AddVariable("HCandPT__div_sqrtHCandMass", "HCandPT__div_sqrtHCandMass", "", 'F');
     // dataloader->AddVariable("goodPhotons_pt", "goodPhotons_pt", "", 'F');
-    dataloader->AddVariable("goodPhotons_pt__div_HCandPT", "goodPhotons_pt__div_HCandPT", "", 'F');
+    dataloader->AddVariable("goodPhotons_pt/HCandPT", "goodPhotons_pt__div_HCandPT", "", 'F');
     // dataloader->AddVariable("goodPhotons_pt__div_HCandMass", "goodPhotons_pt__div_HCandMass", "", 'F');
     // dataloader->AddVariable("goodPhotons_pt__div_sqrtHCandMass", "goodPhotons_pt__div_sqrtHCandMass", "", 'F');
     // dataloader->AddVariable("goodMeson_pt", "goodMeson_pt", "", 'F');
-    dataloader->AddVariable("goodMeson_pt__div_HCandPT", "goodMeson_pt__div_HCandPT", "", 'F');
+    dataloader->AddVariable("goodMeson_pt/HCandPT", "goodMeson_pt__div_HCandPT", "", 'F');
     // dataloader->AddVariable("goodMeson_pt__div_HCandMass", "goodMeson_pt__div_HCandMass", "", 'F');
     // dataloader->AddVariable("goodMeson_pt__div_sqrtHCandMass", "goodMeson_pt__div_sqrtHCandMass", "", 'F');
-    dataloader->AddVariable("goodMeson_DR", "goodMeson_DR", "", 'F');
-    // dataloader->AddVariable("goodMeson_DR * HCandMass", "goodMeson_DR__times_HCandMass", "", 'F');
+    /// dataloader->AddVariable("goodMeson_DR", "goodMeson_DR", "", 'F');
+    /// dataloader->AddVariable("goodMeson_DR * HCandMass", "goodMeson_DR__times_HCandMass", "", 'F');
     // dataloader->AddVariable("goodMeson_DR__times_sqrtHCandMass", "goodMeson_DR__times_sqrtHCandMass", "", 'F');
-
+    
     dataloader->AddVariable("goodPhotons_eta", "goodPhotons_eta", "", 'F');
     dataloader->AddVariable("goodPhotons_mvaID", "goodPhotons_mvaID", "", 'F');
     dataloader->AddVariable("SoftActivityJetNjets5", "SoftActivityJetNjets5", "", 'F');
-    // dataloader->AddVariable("DeepMETResolutionTune_pt", "DeepMETResolutionTune_pt", "GeV/c", 'F');
+    dataloader->AddVariable("DeepMETResolutionTune_pt", "DeepMETResolutionTune_pt", "GeV/c", 'F');
     dataloader->AddVariable("goodMeson_mass", "goodMeson_mass", "GeV/c^2", 'F');
     dataloader->AddVariable("goodMeson_iso", "goodMeson_iso", "", 'F');
     // dataloader->AddVariable("goodMeson_massErr", "goodMeson_massErr", "GeV/c^2", 'F');
-    // dataloader->AddVariable("goodMeson_sipPV", "goodMeson_sipPV", "", 'F');
+    dataloader->AddVariable("goodMeson_sipPV", "goodMeson_sipPV", "", 'F');
     
     dataloader->AddVariable("dPhiGammaMesonCand", "dPhiGammaMesonCand", "", 'F');
-    //dataloader->AddVariable("dEtaGammaMesonCand", "dEtaGammaMesonCand", "", 'F');
+    // dataloader->AddVariable("dEtaGammaMesonCand", "dEtaGammaMesonCand", "", 'F');
     // dataloader->AddVariable("dPhiGammaMesonCand/HCandMass", "dPhiGammaMesonCand__div_HCandMass", "", 'F');
     dataloader->AddVariable("dEtaGammaMesonCand/HCandMass", "dEtaGammaMesonCand__div_HCandMass", "", 'F');
     // dataloader->AddVariable("dPhiGammaMesonCand__div_sqrtHCandMass", "dPhiGammaMesonCand__div_sqrtHCandMass", "", 'F');
     //dataloader->AddVariable("dEtaGammaMesonCand__div_sqrtHCandMass", "dEtaGammaMesonCand__div_sqrtHCandMass", "", 'F');
 
     dataloader->AddVariable("nGoodJets", "nGoodJets", "", 'F');
-    // dataloader->AddVariable("sigmaHCandMass_Rel2", "sigmaHCandMass_Rel2", "", 'F');
+    dataloader->AddVariable("sigmaHCandMass_Rel2", "sigmaHCandMass_Rel2", "", 'F');
     // dataloader->AddVariable("goodPhotons_energyErr", "goodPhotons_energyErr", "", 'F');
-    /*
-    dataloader->AddVariable("HCandMass", "HCandMass", "GeV/c^2", 'F'); // DON'T USE!
-    dataloader->AddVariable("HCandPT", "HCandPT", "", 'F');
-    dataloader->AddVariable("HCandPT__div_HCandMass", "HCandPT__div_HCandMass", "", 'F');
-    dataloader->AddVariable("HCandPT__div_sqrtHCandMass", "HCandPT__div_sqrtHCandMass", "", 'F');
-    dataloader->AddVariable("goodPhotons_pt", "goodPhotons_pt", "", 'F');
-    dataloader->AddVariable("goodPhotons_pt__div_HCandPT", "goodPhotons_pt__div_HCandPT", "", 'F');
-    dataloader->AddVariable("goodPhotons_pt__div_HCandMass", "goodPhotons_pt__div_HCandMass", "", 'F');
-    dataloader->AddVariable("goodPhotons_pt__div_sqrtHCandMass", "goodPhotons_pt__div_sqrtHCandMass", "", 'F');
-    dataloader->AddVariable("goodMeson_pt", "goodMeson_pt", "", 'F');
-    dataloader->AddVariable("goodMeson_pt__div_HCandPT", "goodMeson_pt__div_HCandPT", "", 'F');
-    dataloader->AddVariable("goodMeson_pt__div_HCandMass", "goodMeson_pt__div_HCandMass", "", 'F');
-    dataloader->AddVariable("goodMeson_pt__div_sqrtHCandMass", "goodMeson_pt__div_sqrtHCandMass", "", 'F');
-    dataloader->AddVariable("goodMeson_DR", "goodMeson_DR", "", 'F');
-    dataloader->AddVariable("goodMeson_DR * HCandMass", "goodMeson_DR__times_HCandMass", "", 'F');
-    dataloader->AddVariable("goodMeson_DR__times_sqrtHCandMass", "goodMeson_DR__times_sqrtHCandMass", "", 'F');
-        
-    dataloader->AddVariable("dPhiGammaMesonCand", "dPhiGammaMesonCand", "", 'F');
-    dataloader->AddVariable("dEtaGammaMesonCand", "dEtaGammaMesonCand", "", 'F');
-    dataloader->AddVariable("dPhiGammaMesonCand/HCandMass", "dPhiGammaMesonCand__div_HCandMass", "", 'F');
-    dataloader->AddVariable("dEtaGammaMesonCand/HCandMass", "dEtaGammaMesonCand__div_HCandMass", "", 'F');
-    dataloader->AddVariable("dPhiGammaMesonCand__div_sqrtHCandMass", "dPhiGammaMesonCand__div_sqrtHCandMass", "", 'F');
-    dataloader->AddVariable("dEtaGammaMesonCand__div_sqrtHCandMass", "dEtaGammaMesonCand__div_sqrtHCandMass", "", 'F');
-    */
+
     // Set weights
     dataloader->SetWeightExpression("w");
 
@@ -130,26 +104,23 @@ void TMVA_ggH ( const char* outFileName,
 
     // Apply split
     ////////////////////// TODO: use cross validation /////////////////////////
-    const char* trainTreeEventSplitStr = "(Entry$ % 3) > 0"; //"(events % 10)>=5";
-    const char* testTreeEventSplitStr = "(Entry$ % 3) == 0"; // "(events % 10)<5";
+    const char* trainTreeEventSplitStr = "(Entry$ % 3) > 0 ";
+    const char* testTreeEventSplitStr = "(Entry$ % 3) == 0";
     
     // Apply cuts
-    const char* higgsMass = /* "HCandMass > 40"; */ "HCandMass > 90 && HCandMass <= 170";
+    const char* higgsMass_full = "HCandMass > 100 && HCandMass <= 170";
+    const char* higgsMass = "HCandMass > 115 && HCandMass < 135";
     const char* nanRemove = "!TMath::IsNaN(goodMeson_massErr) && !TMath::IsNaN(sigmaHCandMass_Rel2)";
     
-    TCut cutSignalTrain = Form("%s && %s && %s", trainTreeEventSplitStr, higgsMass, nanRemove);
-    TCut cutBkgTrain = Form("%s && %s && %s", trainTreeEventSplitStr, higgsMass, nanRemove);
-    TCut cutSignalTest = Form("%s && %s && %s", testTreeEventSplitStr, higgsMass, nanRemove);
-    TCut cutBkgTest = Form("%s && %s && %s", testTreeEventSplitStr, higgsMass, nanRemove);
+    TCut cutSignalTrain = Form("%s && %s && %s", trainTreeEventSplitStr, higgsMass_full, nanRemove);
+    TCut cutBkgTrain = Form("%s && %s && %s", trainTreeEventSplitStr, higgsMass_full, nanRemove);
+    TCut cutSignalTest = Form("%s && %s && %s", testTreeEventSplitStr, higgsMass_full, nanRemove);
+    TCut cutBkgTest = Form("%s && %s && %s", testTreeEventSplitStr, higgsMass_full, nanRemove);
     
     // Register trees
     ///////////////////// TODO: add weight per event basis /////////////////////
     double signalWeight = 1.0;
     double backgroundWeight = 1.0;
-    //dataloader->AddTree((TTree*)sgnfile->Get("events"), "Signal",
-    //                    signalWeight, cutTrainSignal, "train");
-    //dataloader->AddTree((TTree*)sgnfile->Get("events"), "Signal",
-    //                    signalWeight, cutTestSignal, "test");
     
     dataloader->AddTree((TTree*)sgnfile->Get("events"), "Signal", signalWeight, cutSignalTrain, "train");
     dataloader->AddTree((TTree*)bkgfile1->Get("events"), "Background", backgroundWeight, cutBkgTrain, "train");
@@ -165,7 +136,7 @@ void TMVA_ggH ( const char* outFileName,
     dataloader->AddTree((TTree*)bkgfile4->Get("events"), "Background", backgroundWeight, cutBkgTest, "test");
     dataloader->AddTree((TTree*)bkgfile5->Get("events"), "Background", backgroundWeight, cutBkgTest, "test");
     
-    TMVA::Factory factory("TMVAClassification", outfile, "!V:!Silent:Color:DrawProgressBar:Transformations=I;D;P;G,D:AnalysisType=Classification");
+    TMVA::Factory factory("TMVAClassification", outfile, "!V:!Silent:Color:DrawProgressBar:AnalysisType=Classification"); // :Transformations=I;D;P;G,D
 
     /*
     // Use cross validation
@@ -222,18 +193,18 @@ void TMVA_ggH ( const char* outFileName,
     {
         // factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTA_d2_t200",
         //               "!V:NTrees=200:MinNodeSize=2.5%:MaxDepth=2:BoostType=AdaBoost:AdaBoostBeta=0.1:UseBaggedBoost:BaggedSampleFraction=0.01:SeparationType=GiniIndex:nCuts=30" );
-        // factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTA_d3_t80",
-        //              "!V:NTrees=80:MinNodeSize=2.5%:MaxDepth=3:BoostType=AdaBoost:AdaBoostBeta=0.5:UseBaggedBoost:BaggedSampleFraction=0.5:SeparationType=GiniIndex:nCuts=20" );
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTA_d3_t80",
+                           "!V:VarTransform=D:NTrees=115:MinNodeSize=5%:MaxDepth=3:BoostType=AdaBoost:AdaBoostBeta=0.5:UseBaggedBoost:BaggedSampleFraction=0.7:SeparationType=GiniIndex:nCuts=12" );
         // factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTA_d4_t60",
         //              "!V:NTrees=80:MinNodeSize=2.5%:MaxDepth=4:BoostType=AdaBoost:AdaBoostBeta=0.5:UseBaggedBoost:BaggedSampleFraction=0.5:SeparationType=GiniIndex:nCuts=20" );
     }
 
     if (useBDTG)
     {
-        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_depth4_with_pruning",
-                           "!V:VarTransform=D:NTrees=100:BoostType=Grad:Shrinkage=0.2:MaxDepth=4:SeparationType=GiniIndex:nCuts=15:UseRandomisedTrees:UseNvars=10:UseBaggedBoost:BaggedSampleFraction=0.5:PruneMethod=CostComplexity:PruneStrength=30" );
+        // factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_depth4_with_pruning",
+        //                    "!V:VarTransform=P,D:NTrees=100:BoostType=Grad:Shrinkage=0.06:MaxDepth=4:SeparationType=GiniIndex:nCuts=15:UseRandomisedTrees:UseNvars=12:UseBaggedBoost:BaggedSampleFraction=0.8:PruneMethod=CostComplexity:PruneStrength=80" );
         factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG",
-                           "!V:VarTransform=D:NTrees=100:BoostType=Grad:Shrinkage=0.2:MaxDepth=3:SeparationType=GiniIndex:nCuts=15:UseRandomisedTrees:UseNvars=10:UseBaggedBoost:BaggedSampleFraction=0.5:PruneMethod=NoPruning" );
+                           "!V:VarTransform=P,D:NTrees=115:BoostType=Grad:Shrinkage=0.075:MaxDepth=3:SeparationType=GiniIndex:nCuts=12:UseRandomisedTrees:UseNvars=12:UseBaggedBoost:BaggedSampleFraction=0.8:PruneMethod=NoPruning" );
         // factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d3",
         //                   "!V:NTrees=600:BoostType=Grad:Shrinkage=0.1:MaxDepth=3:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=8:UseBaggedBoost:BaggedSampleFraction=0.6:PruneMethod=CostComplexity:PruneStrength=60" );
         // factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG__rho",
@@ -257,8 +228,8 @@ void TMVA_ggH ( const char* outFileName,
 #endif
  
         // Define DNN layout
-        TString inputLayoutString = "InputLayout=1|1|12";
-        TString batchLayoutString= "BatchLayout=1|128|12";
+        TString inputLayoutString = "InputLayout=1|1|14";
+        TString batchLayoutString= "BatchLayout=1|128|14";
         TString layoutString ("Layout=DENSE|64|TANH,DENSE|64|TANH,DENSE|64|TANH,DENSE|64|TANH,DENSE|1|LINEAR");
         // Define Training strategies
         // one can catenate several training strategies
