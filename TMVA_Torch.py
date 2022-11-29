@@ -101,7 +101,6 @@ def train(model, train_loader, val_loader, num_epochs, batch_size, optimizer, cr
                 HCandMass = X[:,0].unsqueeze(1)
                 weights = X[:,1].unsqueeze(1)
                 output = model(X[:,2:])
-                print(torch.round(output))
                 #val_loss = criterion(output, y)                
                 val_loss = criterion(output, y, HCandMass, weights, disco_lambda)
                 running_val_loss += val_loss.item()
@@ -141,8 +140,8 @@ def predict(model, test_X, batch_size=32):
 ############# TMVA Loading ###############
 ##########################################
 
-def load_data(cat='ggH',
-              meson='rho',
+def load_data(cat='GF',
+              meson='Rho',
               year=[2018],
               sgn_mc=[1027],
               bkg_mc=[10,11,12,13,14]): # TODO: move to utils module
@@ -150,16 +149,16 @@ def load_data(cat='ggH',
     Helper function to load data into TMVA.
     
     Arguments
-    cat: (string) name of the category, e.g. 'ggH', 'VBF',  'VBFlow', 'Zinv', etc.
-    meson: (string) name of the meson produced, e.g. 'phi', 'rho'
+    cat: (string) name of the category, e.g. 'GF', 'VBF',  'VBFlow', 'Zinv', etc.
+    meson: (string) name of the meson produced, e.g. 'Phi', 'Rho'
     year: (list) year of the data/MC taken/produced
     sgn_mc: (list) MC number(s) of the signal process; - for data
     bkg_mc: (list) MC number(s) of the background process; - for data
     Returns
     (list of signal TFiles, list of background TFiles)
     """
-    top_level_dir = '/work/submit/kyoon/RareHiggs/data/'
-    file_format = top_level_dir + 'cat_{meson}/cat_{meson}_{cat}/test/test_mc{mc}_{cat}cat_{meson}cat_{yr}.root'
+    top_level_dir = '/work/submit/mariadlf/Hrare/SEPT24'
+    file_format = top_level_dir + '/{yr}/outname_mc{mc}_{cat}cat_{meson}Cat_{yr}.root'
 
     signal_files = []
     background_files = []
@@ -207,15 +206,18 @@ dataloader = TMVA.DataLoader('dataset')
 features = ['HCandMass', 'w', # It is crucial to keep these two variables in indices 0 and 1
             'HCandPT',
             'goodPhotons_pt',
-            'goodPhotons_eta',
-            'goodPhotons_mvaID',
             'goodMeson_pt',
-            'goodMeson_iso',
-            'goodMeson_DR',
+            'goodPhotons_eta',
+            'sigmaHCandMass_Rel2',
+            'goodPhotons_mvaID',
             'goodMeson_mass',
+            'goodMeson_iso',
+            'goodMeson_sipPV',
             'dPhiGammaMesonCand',
             'dEtaGammaMesonCand',
-            'nGoodJets']
+            'nGoodJets',
+            'SoftActivityJetNjets5',
+            'DeepMETResolutionTune_pt']
 
 for feature in features:
     dataloader.AddVariable(feature)
@@ -225,7 +227,7 @@ for feature in features:
 #split_train = '(Entry$ % 3) < 2'
 #split_test = '(Entry$ % 3) == 2'
 
-higgs_mass_window = 'HCandMass > 90 && HCandMass < 170'
+higgs_mass_window = 'HCandMass > 100 && HCandMass < 170'
 nan_remove = ' && '.join(['!TMath::IsNaN({})'.format(var) for var in features])
 
 cut_signal = ' && '.join((higgs_mass_window, nan_remove))
@@ -236,7 +238,7 @@ s, b = load_data()
 add_files_to_dataloader(s, b, dataloader)
 dataloader.PrepareTrainingAndTestTree(cut_signal,
                                       cut_background,
-                                      'nTrain_Signal=25000:nTrain_Background=25000:'
+                                      'nTrain_Signal=20000:nTrain_Background=20000:'
                                       'nTest_Signal=5000:nTest_Background=5000:'
                                       'SplitMode=Alternate:MixMode=Random:NormMode=NumEvents:!V')
 
@@ -271,7 +273,7 @@ factory.EvaluateAllMethods()
 
 # Convert model to onnx file
 model = torch.jit.load("trainedModelClassification.pt")
-xinput = torch.zeros((1,11))   # define input shape (assume batch size = 1)
+xinput = torch.zeros((1,len(features)-2))   # define input shape (assume batch size = 1)
 torch.onnx.export(model,xinput,"trainedModelClassification.onnx",export_params=True)
 
 # Plot ROC Curves
