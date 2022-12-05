@@ -166,9 +166,11 @@ def load_data(cat='GF',
     for yr_ in year:
         for mc_ in sgn_mc:
             f = TFile.Open(file_format.format(**{'yr':yr_, 'mc':mc_, 'cat':cat, 'meson':meson}), 'READ')
+            print(f)
             signal_files.append(f)
         for mc_ in bkg_mc:
             f = TFile.Open(file_format.format(**{'yr':yr_, 'mc':mc_, 'cat':cat, 'meson':meson}), 'READ')
+            print(f)
             background_files.append(f)
 
     return signal_files, background_files
@@ -193,89 +195,104 @@ def add_files_to_dataloader(signal_files,
 ############## Script part ###############
 ##########################################
 
-# Setup TMVA
-TMVA.Tools.Instance()
-TMVA.PyMethodBase.PyInitialize()
- 
-output = TFile.Open('TMVA.root', 'RECREATE')
-factory = TMVA.Factory('TMVAClassification', output,
-                       '!V:!Silent:Color:DrawProgressBar:Transformations=D,G:AnalysisType=Classification')
+def train_MVA (prod, channel, feature_list):
 
-# Setup dataloader
-dataloader = TMVA.DataLoader('dataset')
-features = ['HCandMass', 'w', # It is crucial to keep these two variables in indices 0 and 1
-            'HCandPT',
-            'goodPhotons_pt',
-            'goodMeson_pt',
-            'goodPhotons_eta',
-            'sigmaHCandMass_Rel2',
-            'goodPhotons_mvaID',
-            'goodMeson_mass',
-            'goodMeson_iso',
-            'goodMeson_sipPV',
-            'dPhiGammaMesonCand',
-            'dEtaGammaMesonCand',
-            'nGoodJets',
-            'SoftActivityJetNjets5',
-            'DeepMETResolutionTune_pt']
+    TMVA_outfile_name = 'TMVA_Torch_{}_{}.root'.format(prod, channel)
+    Torch_model_name = 'modelClassification_{}_{}.pt'.format(prod, channel)
+    Torch_trained_name = 'trainedModelClassification_{}_{}.pt'.format(prod, channel)
+    ONNX_trained_name = 'trainedModelClassification_{}_{}.onnx'.format(prod, channel)
+    
+    # Setup TMVA
+    TMVA.Tools.Instance()
+    TMVA.PyMethodBase.PyInitialize()
 
-for feature in features:
-    dataloader.AddVariable(feature)
-#dataloader.SetWeightExpression('w')
+    # Setup factory
+    output = TFile.Open(TMVA_outfile_name, 'RECREATE')
+    factory = TMVA.Factory('TMVAClassification', output,
+                           '!V:!Silent:Color:DrawProgressBar:Transformations=D,G:AnalysisType=Classification')
 
-# Define splits and cuts
-#split_train = '(Entry$ % 3) < 2'
-#split_test = '(Entry$ % 3) == 2'
+    # Setup dataloader
+    dataloader = TMVA.DataLoader('dataset')
 
-higgs_mass_window = 'HCandMass > 100 && HCandMass < 170'
-nan_remove = ' && '.join(['!TMath::IsNaN({})'.format(var) for var in features])
+    for feature in feature_list:
+        dataloader.AddVariable(feature)
+    #dataloader.SetWeightExpression('w')
 
-cut_signal = ' && '.join((higgs_mass_window, nan_remove))
-cut_background = ' && '.join((higgs_mass_window, nan_remove))
+    # Define splits and cuts
+    #split_train = '(Entry$ % 3) < 2'
+    #split_test = '(Entry$ % 3) == 2'
 
-# Load data
-s, b = load_data()
-add_files_to_dataloader(s, b, dataloader)
-dataloader.PrepareTrainingAndTestTree(cut_signal,
-                                      cut_background,
-                                      'nTrain_Signal=20000:nTrain_Background=20000:'
-                                      'nTest_Signal=5000:nTest_Background=5000:'
-                                      'SplitMode=Alternate:MixMode=Random:NormMode=NumEvents:!V')
+    higgs_mass_window = 'HCandMass > 100 && HCandMass < 170'
+    nan_remove = ' && '.join(['!TMath::IsNaN({})'.format(var) for var in feature_list])
+
+    cut_signal = ' && '.join((higgs_mass_window, nan_remove))
+    cut_background = ' && '.join((higgs_mass_window, nan_remove))
+
+    # Load data
+    year_list, sgn_mc_list, bkg_mc_list = [], [], []
+    if prod=='GF' and channel=='Rho':
+        year_list, sgn_mc_list, bkg_mc_list = [2018], [1027], [10, 11, 12, 13, 14]
+    s, b = load_data(prod, channel, year_list, sgn_mc_list, bkg_mc_list)
+    add_files_to_dataloader(s, b, dataloader)
+    dataloader.PrepareTrainingAndTestTree(cut_signal,
+                                          cut_background,
+                                          'nTrain_Signal=20000:nTrain_Background=20000:'
+                                          'nTest_Signal=5000:nTest_Background=5000:'
+                                          'SplitMode=Alternate:MixMode=Random:NormMode=NumEvents:!V')
+
+    # Create the model
+    # Convert the model to torchscript before saving
+    model = Net(len(feature_list)-2)
+    m = torch.jit.script(model)
+    torch.jit.save(m, Torch_model_name)
+    print(m)
+
+    # Book methods
+    # TODO: Compare with BDTG
+    vars_for_transform = ','.join([f'_V{i}_' for i in range(2, len(feature_list))])
+    torch_method_VarTransform_string = 'D+G({0})'.format(vars_for_transform)
+    options = 'H:!V:VarTransform=' + torch_method_VarTransform_string +\
+              ':FilenameModel=modelClassification.pt' +\
+              ':FilenameTrainedModel=trainedModelClassification.pt:NumEpochs=40:BatchSize=64'
+    factory.BookMethod(dataloader, TMVA.Types.kPyTorch, 'PyTorch', options)
+
+    # Train, test, and evaluate
+    factory.TrainAllMethods()
+    factory.TestAllMethods()
+    factory.EvaluateAllMethods() 
+
+    # Convert model to onnx file
+    model = torch.jit.load(Torch_trained_name)
+    xinput = torch.zeros((1, len(feature_list)-2))   # define input shape (assume batch size = 1)
+    torch.onnx.export(model, xinput, ONNX_trained_name, export_params=True)
+
+    # Plot ROC Curves
+    roc = factory.GetROCCurve(dataloader)
+    roc.SaveAs('ROC_ClassificationPyTorch_{}_{}.png'.format(prod, channel))
+
+
 
 # Construct loss function and optimizer
 loss = torch.nn.BCEWithLogitsLoss()
 optimizer = torch.optim.Adam
 
-load_model_custom_objects = {"optimizer": optimizer, "criterion": disco_loss,
-                             "train_func": train, "predict_func": predict}
+load_model_custom_objects = {'optimizer': optimizer, 'criterion': disco_loss,
+                                 'train_func': train, 'predict_func': predict}
 
-# Create the model
-# Convert the model to torchscript before saving
-model = Net(len(features)-2)
-m = torch.jit.script(model)
-torch.jit.save(m, "modelClassification.pt")
-print(m)
- 
-# Book methods
-# TODO: Compare with BDTG
+GF_features = ['HCandMass', 'w', # It is crucial to keep these two variables in indices 0 and 1
+               'HCandPT',
+               'goodPhotons_pt',
+               'goodMeson_pt',
+               'goodPhotons_eta',
+               'sigmaHCandMass_Rel2',
+               'goodPhotons_mvaID',
+               'goodMeson_mass',
+               'goodMeson_iso',
+               'goodMeson_sipPV',
+               'dPhiGammaMesonCand',
+               'dEtaGammaMesonCand',
+               'nGoodJets',
+               'SoftActivityJetNjets5',
+               'DeepMETResolutionTune_pt']
 
-vars_for_transform = ','.join([f'_V{i}_' for i in range(2, len(features))])
-torch_method_VarTransform_string = 'D+G({0})'.format(vars_for_transform)
-factory.BookMethod(dataloader, TMVA.Types.kPyTorch, 'PyTorch',
-                   'H:!V:VarTransform=' + torch_method_VarTransform_string +
-                   ':FilenameModel=modelClassification.pt:'
-                   'FilenameTrainedModel=trainedModelClassification.pt:NumEpochs=40:BatchSize=64') 
-
-# Train, test, and evaluate
-factory.TrainAllMethods()
-factory.TestAllMethods()
-factory.EvaluateAllMethods() 
-
-# Convert model to onnx file
-model = torch.jit.load("trainedModelClassification.pt")
-xinput = torch.zeros((1,len(features)-2))   # define input shape (assume batch size = 1)
-torch.onnx.export(model,xinput,"trainedModelClassification.onnx",export_params=True)
-
-# Plot ROC Curves
-roc = factory.GetROCCurve(dataloader)
-roc.SaveAs('ROC_ClassificationPyTorch.png')
+train_MVA('GF', 'Rho', GF_features)
