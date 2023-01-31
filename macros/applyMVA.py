@@ -3,7 +3,7 @@ import ROOT
 global NVARS
 NVARS = 14
 
-def MVADataFrame (df, prodMode, MVACut=0.0):
+def MVADataFrame (df, prodMode, MVACut=-1.0):
     """ Helper function to apply MVA values.
     
     Args
@@ -19,12 +19,12 @@ def MVADataFrame (df, prodMode, MVACut=0.0):
     
     dfNew = (df
              .Define("HCandPT__div_HCandMass", "(HCandMass>0) ? HCandPT/HCandMass: 0.f")
-             .Define("photon_pt", "(index_pair[1]!= -1) ? goodPhotons_pt[index_pair[1]]: 0.f")
+             .Redefine("photon_pt", "(index_pair[1]!= -1) ? goodPhotons_pt[index_pair[1]]: 0.f")
              .Define("goodPhotons_pt__div_HCandPT", "(index_pair[1]!= -1) ? goodPhotons_pt[index_pair[1]]/HCandPT: 0.f")
              .Define("goodPhotons_pt__div_sqrtHCandMass", "(index_pair[1]!= -1) ? goodPhotons_pt[index_pair[1]]/sqrt(HCandMass): 0.f")
              .Redefine("goodPhotons_eta","(index_pair[1]!= -1) ? goodPhotons_eta[index_pair[1]]: 0.f")
              .Redefine("goodPhotons_mvaID","(index_pair[1]!= -1) ? goodPhotons_mvaID[index_pair[1]]: 0.f")
-             .Define("meson_pt", "(index_pair[0]!= -1) ? goodMeson_pt[index_pair[0]]: 0.f")
+             .Redefine("meson_pt", "(index_pair[0]!= -1) ? goodMeson_pt[index_pair[0]]: 0.f")
              .Define("goodMeson_pt__div_HCandPT", "(index_pair[0]!= -1) ? goodMeson_pt[index_pair[0]]/HCandPT: 0.f")
              .Define("goodMeson_pt__div_sqrtHCandMass", "(index_pair[0]!= -1) ? goodMeson_pt[index_pair[0]]/sqrt(HCandMass): 0.f")
              .Define("goodMeson_DR__times_sqrtHCandMass", "(index_pair[0]!= -1) ? goodMeson_DR[index_pair[0]]*sqrt(HCandMass): 0.f")
@@ -40,16 +40,10 @@ def MVADataFrame (df, prodMode, MVACut=0.0):
              .Redefine("MVAdisc", ROOT.computeModel, list(variables))
             )
 
-    if prodMode=='GF':
-        dfFiltered = (dfNew
-                      .Filter("photon_pt > 40")
-                      .Filter("meson_pt > 40")
-                     )
-
-    dfFinal = dfFiltered.Filter("MVAdisc[0] > {}".format(MVACut))
+    #dfFinal = dfFiltered.Filter("MVAdisc[0] > {}".format(MVACut))
     
     # return dfNew.Histo1D(('MVAdisc', 'MVAdisc', 40, -1, 1), 'MVAdisc')
-    return dfFinal
+    return dfNew
 
 def applyMVA (prodMode, decayChannel, data=False):
     """ Applies MVA weights to MC or data events. """
@@ -60,11 +54,12 @@ def applyMVA (prodMode, decayChannel, data=False):
     # xmlFileFormat = '/work/submit/kyoon/RareHiggs/test/AUG23/ggH_rho/dataset/weights/TMVAClassification_BDTG.weights.xml'
     xmlFileFormat = '/work/submit/kyoon/CMSSW_10_2_13/src/HiggsRareDecay/TMVA/dataset/weights/TMVAClassification_BDTG.weights.xml'
     ## xmlFileFormat = '/work/submit/kyoon/RareHiggs/{BDTfolder}/{traindate}/{prod}_{decay}_{BDTsuffix}/weights/TMVAClassification_BDTG.weights.xml'
-    outFileFormat = '/work/submit/kyoon/RareHiggs/test/MVAoutput/MVAdisc_mc{num}_{prod}cat_{Decay}Cat_{year}_{BDTsuffix}.root'
+    # outFileFormat = '/work/submit/kyoon/RareHiggs/test/MVAoutput/MVAdisc_mc{num}_{prod}cat_{Decay}Cat_{year}_{BDTsuffix}.root'
+    outFileFormat = '/work/submit/kyoon/RareHiggs/test/MVAoutput/{date}/MVA_{traindate}/{year}/outname_mc{num}_{prod}cat_{Decay}Cat_{year}.root'
 
     specification = {'BDTfolder': 'Final_BDT_training',
                      'BDTsuffix': 'MH100-170',
-                     'date': 'SEPT24',
+                     'date': 'DEC28',
                      'decay': decayChannel,
                      'Decay': decayChannel.capitalize(),
                      'num': 0, # will loop over                   
@@ -106,13 +101,10 @@ def applyMVA (prodMode, decayChannel, data=False):
             rootFileName = rootFileFormat.format(**specification)
             df = ROOT.RDataFrame('events', rootFileName)
             # Loop over MVA disc cut values
-            for cut in range(-3, 8, 1):
-                cut *= 0.1
-                specification['BDTsuffix'] = 'MH100-170_MVAcut_{:.1f}'.format(cut)
-                outFileName = outFileFormat.format(**specification)
-                dfMVA = MVADataFrame(df, prodMode, cut)
-                dfMVA.Snapshot('MVA', outFileName, ['HCandMass', 'HCandPT', 'photon_pt', 'meson_pt', 'MVAdisc', 'w'])
-                print('Creating file:\n' + outFileName)
+            outFileName = outFileFormat.format(**specification)
+            dfMVA = MVADataFrame(df, prodMode, -1.)
+            dfMVA.Snapshot('events', outFileName)
+            print('Creating file:\n' + outFileName)
 
     return
 
