@@ -11,5 +11,8 @@
 ##### Others #####
 *.jpg
 *.jpeg
-*.root
+construction/*.root
 *.txt
+
+##### Except #####
+!datacards/*.txt

@@ -17,21 +17,23 @@ void cat_phiW_munu()
 {
     auto fitting = FitData("cat_phiW_munu.root", "../models", "w");
     const char* DIR_DATA_PREFIX
-        = "/home/submit/kyoon/CMSSW_10_2_13/src/HiggsRareDecay/data/cat_phi/cat_phiW_munu";
+        = "/home/submit/kyoon/CMSSW_10_2_13/src/HiggsRareDecay/data/cat_phi/cat_phiW_munu/2018/MC";
 
     /***** SIGNAL FITTING *****/
     // Create observable variable
-    double xlow = 100., xhigh = 150.;
-    int nbins = (int) 2*(xhigh - xlow); // see if this has effect on signal fitting
+    // double xlow = 100., xhigh = 150.;
+    double xlow = 70., xhigh = 200.;
+    int nbins = (int) (xhigh - xlow)/5; // see if this has effect on signal fitting
     RooRealVar mH("HCandMass", "HCandMass", xlow, xhigh, "GeV");
-    mH.setBins(nbins);
 
     // Create signal histogram & dataset
-    auto fn_signal = Form("%s/cat_phiW_munu_signal.root", DIR_DATA_PREFIX);
-    TH1F signal = fitting.fetchHistogram({(const char*) fn_signal}, "events", "HCandMass",
+    auto fn_signal_WpH = (const char*) Form("%s/cat_phiW_munu_signal_WpH.root", DIR_DATA_PREFIX);
+    auto fn_signal_WmH = (const char*) Form("%s/cat_phiW_munu_signal_WmH.root", DIR_DATA_PREFIX);
+    TH1F signal = fitting.fetchHistogram({fn_signal_WpH, fn_signal_WmH}, "events", "HCandMass",
                                          "cat_phiW_munu_signal",
                                          "cat_phiW_munu signal",
-                                         nbins, xlow, xhigh);
+                                         // nbins, xlow, xhigh);
+                                         100, 100., 150., "w", 59.70);
     RooDataHist data_signal = fitting.makeBinnedData("data_signal_cat_phiW_munu", mH, signal);
 
     // Fit to signal
@@ -43,19 +45,20 @@ void cat_phiW_munu()
     auto fn_Wjets      = (const char*) Form("%s/cat_phiW_munu_Wjets.root", DIR_DATA_PREFIX);
     auto fn_Wgamma     = (const char*) Form("%s/cat_phiW_munu_Wgamma.root", DIR_DATA_PREFIX);
     auto fn_Zgamma     = (const char*) Form("%s/cat_phiW_munu_Zgamma.root", DIR_DATA_PREFIX);
-    auto fn_ttbar_llvv = (const char*) Form("%s/cat_phiW_munu_ttbar_llvv.root", DIR_DATA_PREFIX);
+    // auto fn_ttbar_llvv = (const char*) Form("%s/cat_phiW_munu_ttbar_llvv.root", DIR_DATA_PREFIX);
 
-    const std::vector<const char*> fn_bkg {fn_DYjets, fn_Wjets, fn_Wgamma, fn_Zgamma, fn_ttbar_llvv};
+    const std::vector<const char*> fn_bkg {fn_DYjets, fn_Wjets, fn_Wgamma, fn_Zgamma};
 
-    xlow = 70., xhigh = 200.;
-    nbins = (int) 2*(xhigh - xlow);
+    // xlow = 70., xhigh = 200.;
+    // nbins = (int) 2*(xhigh - xlow);
     TH1F bkg_comb = fitting.fetchHistogram(fn_bkg, "events", "HCandMass",
                                            "cat_phiW_munu_bkg_comb",
                                            "cat_phiW_munu combined background",
-                                           nbins, xlow, xhigh);
+                                           nbins, xlow, xhigh, "w", 59.70);
 
     // Create background dataset
     mH.setRange(xlow, xhigh);
+    mH.setBins(nbins);
     RooDataHist data_bkg_comb = fitting.makeBinnedData("data_bkg_comb_cat_phiW_munu", mH, bkg_comb);
     
     fitting.performMultiLikelihoodFit("bern", mH, data_bkg_comb);
@@ -63,11 +66,19 @@ void cat_phiW_munu()
     fitting.performMultiLikelihoodFit("pow", mH, data_bkg_comb);
     fitting.performMultiLikelihoodFit("exp", mH, data_bkg_comb);
 
-    // Create toy dataset
-    fitting.saveToyData(mH, "bern3", "trigauss", .5, 1e+6);
+    // Create toy datasets
+    fitting.saveToyData(mH, "trigauss", "bern2", 0, 1e+6);
+    fitting.saveToyData(mH, "trigauss", "bern3", 0, 1e+6);
+    // fitting.saveToyData(mH, "trigauss", "bern4", 0, 1e+6);
+    fitting.saveToyData(mH, "trigauss", "lau2", 0, 1e+6);
+    fitting.saveToyData(mH, "trigauss", "lau3", 0, 1e+6);
+    fitting.saveToyData(mH, "trigauss", "powsrs1", 0, 1e+6);
+    fitting.saveToyData(mH, "trigauss", "powsrs2", 0, 1e+6);
+    fitting.saveToyData(mH, "trigauss", "expsrs1", 0, 1e+6);
+    fitting.saveToyData(mH, "trigauss", "expsrs2", 0, 1e+6);
     
     // Make RooMultiPdf
-    fitting.saveMultiPdf({"bern2", "bern3", "bern4",
+    fitting.saveMultiPdf({"bern2", "bern3", // "bern4",
                           "lau2", "lau3",
                           "powsrs1", "powsrs2",
                           "expsrs1", "expsrs2"},

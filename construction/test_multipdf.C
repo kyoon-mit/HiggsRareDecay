@@ -19,7 +19,7 @@ using namespace RooFit;
 void test_multipdf()
 {
     auto fitting = FitData();
-    fitting.setSaveOption(true);
+    fitting.setSaveOption(true, false);
 
     const char* file_format = "/home/submit/kyoon/CMSSW_10_6_27/src/Hrare/analysis/outname_mc%d_Wcat.root";
 
@@ -49,18 +49,21 @@ void test_multipdf()
     RooRealVar mH("mH", "mH", xlow, xhigh, "GeV");
 
     // Fit to signal
-    RooDataHist sgndata("signal", "signal", mH, &signal);
+    // RooDataHist sgndata("signal", "signal", mH, &signal);
     // fitting.performSignalFit(&mH, &sgndata);
 
     // Fit to background
     auto bkgdata = fitting.makeBinnedData("bkg_comb", mH, bkg_comb);
-    // fitting.performMultiLikelihoodFit("bernXgauss", &mH, &bkgdata, {.61, .31, .24, .037, .047});
-    // fitting.performMultiLikelihoodFit("lauXgauss", &mH, &bkgdata);
-    // fitting.performMultiLikelihoodFit("powXgauss", &mH, &bkgdata, {}, {}, 100);
+    fitting.performMultiLikelihoodFit("expXgauss", mH, bkgdata);
+    // fitting.performMultiLikelihoodFit("bernXgauss", mH, bkgdata, {.61, .31, .24, .037, .047});
+    // fitting.performMultiLikelihoodFit("lauXgauss", mH, bkgdata);
+    // fitting.performMultiLikelihoodFit("powXgauss", mH, bkgdata, {}, {}, .05);
 
     // Save multipdf
     // fitting.saveMultiPdf({"bern7_X_gauss", "lau4_X_gauss", "pow4_X_gauss"}, "bkgmultipdf");
+    // fitting.manuallyFitParams("lauXgauss", 2, "lau2f1", &mH, &bkgdata, {0.5}, {0.5});
 
+    /*
     fitting.plotMultiplePDFs(&mH, &bkgdata, "bern_conv_gauss", {"bern3_X_gauss",
                                                                 "bern4_X_gauss",
                                                                 "bern5_X_gauss",
@@ -85,4 +88,5 @@ void test_multipdf()
                                                                    kViolet+7,
                                                                    kMagenta+1,
                                                                    kRed});
+    */
 }

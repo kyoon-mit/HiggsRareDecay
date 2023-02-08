@@ -19,12 +19,12 @@ void TMVA_ggH ( const char* outFileName,
     
     // options to control used methods
     bool useRandomSplitting = false; // option for cross validation
-    bool useLikelihood = false;    // likelihood based discriminant
+    bool useLikelihood = true;    // likelihood based discriminant
     bool useLikelihoodKDE = false;    // likelihood based discriminant
     bool useFischer = false;       // Fischer discriminant
     bool useMLP = false;          // Multi Layer Perceptron (old TMVA NN implementation)
-    bool useBDT = false;           // Boosted Decision Tree (AdaBoost)
-    bool useBDTG = false;         // BDT with GradBoost
+    bool useBDT = true;           // Boosted Decision Tree (AdaBoost)
+    bool useBDTG = true;         // BDT with GradBoost
     bool useDL = false;           // TMVA Deep Learning ( CPU or GPU)
     // bool useKeras = false;        // Keras Deep learning
     
@@ -59,7 +59,7 @@ void TMVA_ggH ( const char* outFileName,
     const char* idx0 = "index_pair[0]"; // Meson index
     const char* idx1 = "index_pair[1]"; // Photon index
 
-    dataloader->AddVariable("HCandMass", "HCandMass", "GeV/c^2", 'F'); // DON'T USE!
+    // dataloader->AddVariable("HCandMass", "HCandMass", "GeV/c^2", 'F'); // DON'T USE!
 
     /// dataloader->AddVariable("HCandPT", "HCandPT", "", 'F');
     dataloader->AddVariable("HCandPT/HCandMass", "HCandPT__div_HCandMass", "", 'F');
@@ -82,6 +82,7 @@ void TMVA_ggH ( const char* outFileName,
     dataloader->AddVariable("DeepMETResolutionTune_pt", "DeepMETResolutionTune_pt", "GeV/c", 'F');
     dataloader->AddVariable("goodMeson_mass", "goodMeson_mass", "GeV/c^2", 'F');
     dataloader->AddVariable("goodMeson_iso", "goodMeson_iso", "", 'F');
+    ////dataloader->AddVariable("(goodMeson_trk1_pt/goodMeson_pt) * goodMeson_iso", "goodMeson_trk1_iso", "", 'F');
     // dataloader->AddVariable("goodMeson_massErr", "goodMeson_massErr", "GeV/c^2", 'F');
     dataloader->AddVariable("goodMeson_sipPV", "goodMeson_sipPV", "", 'F');
     
@@ -97,7 +98,7 @@ void TMVA_ggH ( const char* outFileName,
     // dataloader->AddVariable("goodPhotons_energyErr", "goodPhotons_energyErr", "", 'F');
 
     // Set weights
-    dataloader->SetWeightExpression("w");
+    dataloader->SetWeightExpression("w"); // * sigmaHCandMass_Rel2"); // TODO: haven't tried this yet
 
     // Spectator used for split
     // dataloader->AddSpectator("Entry$", "eventID");
@@ -193,7 +194,7 @@ void TMVA_ggH ( const char* outFileName,
     {
         // factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTA_d2_t200",
         //               "!V:NTrees=200:MinNodeSize=2.5%:MaxDepth=2:BoostType=AdaBoost:AdaBoostBeta=0.1:UseBaggedBoost:BaggedSampleFraction=0.01:SeparationType=GiniIndex:nCuts=30" );
-        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTA_d3_t80",
+        factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTA",
                            "!V:VarTransform=D:NTrees=115:MinNodeSize=5%:MaxDepth=3:BoostType=AdaBoost:AdaBoostBeta=0.5:UseBaggedBoost:BaggedSampleFraction=0.7:SeparationType=GiniIndex:nCuts=12" );
         // factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTA_d4_t60",
         //              "!V:NTrees=80:MinNodeSize=2.5%:MaxDepth=4:BoostType=AdaBoost:AdaBoostBeta=0.5:UseBaggedBoost:BaggedSampleFraction=0.5:SeparationType=GiniIndex:nCuts=20" );
@@ -203,8 +204,10 @@ void TMVA_ggH ( const char* outFileName,
     {
         // factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_depth4_with_pruning",
         //                    "!V:VarTransform=P,D:NTrees=100:BoostType=Grad:Shrinkage=0.06:MaxDepth=4:SeparationType=GiniIndex:nCuts=15:UseRandomisedTrees:UseNvars=12:UseBaggedBoost:BaggedSampleFraction=0.8:PruneMethod=CostComplexity:PruneStrength=80" );
+        // factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG",
+        //                    "!V:VarTransform=P,D:NTrees=115:BoostType=Grad:Shrinkage=0.075:MaxDepth=3:SeparationType=GiniIndex:nCuts=12:UseRandomisedTrees:UseNvars=12:UseBaggedBoost:BaggedSampleFraction=0.8:PruneMethod=NoPruning" );
         factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG",
-                           "!V:VarTransform=P,D:NTrees=115:BoostType=Grad:Shrinkage=0.075:MaxDepth=3:SeparationType=GiniIndex:nCuts=12:UseRandomisedTrees:UseNvars=12:UseBaggedBoost:BaggedSampleFraction=0.8:PruneMethod=NoPruning" );
+                           "!V:NTrees=115:BoostType=Grad:Shrinkage=0.075:MaxDepth=3:SeparationType=GiniIndex:nCuts=12:UseRandomisedTrees:UseNvars=12:UseBaggedBoost:BaggedSampleFraction=0.8:PruneMethod=NoPruning" );
         // factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_d3",
         //                   "!V:NTrees=600:BoostType=Grad:Shrinkage=0.1:MaxDepth=3:SeparationType=GiniIndex:nCuts=20:UseRandomisedTrees:UseNvars=8:UseBaggedBoost:BaggedSampleFraction=0.6:PruneMethod=CostComplexity:PruneStrength=60" );
         // factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG__rho",

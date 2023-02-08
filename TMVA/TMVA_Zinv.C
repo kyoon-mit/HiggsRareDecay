@@ -37,15 +37,14 @@ void TMVA_Zinv ( const char* outFileName,
     TFile* bkgfile4;
     TFile* bkgfile5;
     TFile* bkgfile6;
-    if ( std::strcmp(channel, "phi") == 0 ) {
-        
+    if ( std::strcmp(channel, "phi") == 0 ) {        
         fileformat = "/work/submit/mariadlf/Hrare/NOV25/2018/outname_mc%d_Zinvcat_PhiCat_2018.root";
         sgnfile1 = TFile::Open(Form(fileformat, 1011), "READ");
         sgnfile2 = TFile::Open(Form(fileformat, 1012), "READ");
         sgnfile3 = TFile::Open(Form(fileformat, 1015), "READ");
         sgnfile4 = TFile::Open(Form(fileformat, 1016), "READ");
     } else if ( std::strcmp(channel, "rho") == 0 ) {
-        fileformat = "/work/submit/mariadlf/Hrare/NOV10/2018/outname_mc%d_Zinvcat_RhoCat_2018.root";
+        fileformat = "/work/submit/mariadlf/Hrare/NOV25/2018/outname_mc%d_Zinvcat_RhoCat_2018.root";
         sgnfile1 = TFile::Open(Form(fileformat, 1021), "READ");
         sgnfile2 = TFile::Open(Form(fileformat, 1022), "READ");
         sgnfile3 = TFile::Open(Form(fileformat, 1025), "READ");
@@ -116,7 +115,7 @@ void TMVA_Zinv ( const char* outFileName,
     /// dataloader->AddVariable("nbtag", "nbtag", "", 'F');
        
     // Set weights
-    // dataloader->SetWeightExpression("w");
+    dataloader->SetWeightExpression("w");
 
     // Spectator used for split
     // dataloader->AddSpectator("Entry$", "eventID");
@@ -128,7 +127,7 @@ void TMVA_Zinv ( const char* outFileName,
     
     // Apply cuts
     const char* higgsMass = "HCandMass > 100 && HCandMass < 170";
-    const char* nanRemove = "!TMath::IsNaN(goodMeson_massErr)"; // && !TMath::IsNaN(sigmaHCandMass_Rel2)";
+    const char* nanRemove = "!TMath::IsNaN(goodMeson_massErr) && w < 1000"; // && !TMath::IsNaN(sigmaHCandMass_Rel2)";
     
     TCut cutSignalTrain = Form("%s && %s && %s", trainTreeEventSplitStr, higgsMass, nanRemove);
     TCut cutBkgTrain = Form("%s && %s && %s", trainTreeEventSplitStr, higgsMass, nanRemove);
@@ -237,7 +236,7 @@ void TMVA_Zinv ( const char* outFileName,
     if (useBDTG)
     {
         factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG",
-                           "!V:VarTransform=D:NTrees=75:BoostType=Grad:Shrinkage=0.05:MaxDepth=3:SeparationType=GiniIndex:nCuts=15:UseRandomisedTrees:UseNvars=9:UseBaggedBoost:BaggedSampleFraction=0.8:PruneMethod=NoPruning" );
+                           "!V:VarTransform=D:NTrees=115:BoostType=Grad:Shrinkage=0.065:MaxDepth=3:SeparationType=GiniIndex:nCuts=12:UseRandomisedTrees:UseNvars=9:UseBaggedBoost:BaggedSampleFraction=0.8:PruneMethod=NoPruning" );
         /*
         factory.BookMethod(dataloader,TMVA::Types::kBDT, "BDTG_pruning",
                            "!V:VarTransform=P,D:NTrees=100:BoostType=Grad:Shrinkage=0.068:MaxDepth=4:SeparationType=GiniIndex:nCuts=12:UseRandomisedTrees:UseNvars=20:UseBaggedBoost:BaggedSampleFraction=0.8:PruneMethod=CostComplexity:PruneStrength=110" );
