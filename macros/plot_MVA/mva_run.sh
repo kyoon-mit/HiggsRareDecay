@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cat=VBFlow
+cat=VBF
 
 base='/work/submit/kyoon/RareHiggs/test/MVAoutput/2023'
 top_dir=$(printf '%(%^b%d)T\n' -1)
@@ -12,15 +12,18 @@ mva_results_phi=${work_dir}/${cat}_phi_mvas
 mvafile_rho=${mva_results_rho}/${cat}_rho_mva.root
 mvafile_phi=${mva_results_phi}/${cat}_phi_mva.root
 
+mvalog_rho=${mva_results_rho}/${cat}_rho_mva.out
+mvalog_phi=${mva_results_phi}/${cat}_phi_mva.out
+
 mkdir -p $mva_results_rho
 mkdir -p $mva_results_phi
 
-thisdir=/work/submit/kyoon/CMSSW_10_2_13/src/HiggsRareDecay
+thisdir=/work/submit/kyoon/CMSSW_10_6_27/src/HiggsRareDecay
 
-eval "root -l -b -q '${thisdir}/TMVA/TMVA_${cat}.C(\"${mvafile_rho}\", \"rho\")'"
+eval "root -l -b -q '${thisdir}/TMVA/TMVA_${cat}.C(\"${mvafile_rho}\", \"rho\")' > ${mvalog_rho}"
 eval "root -l -b -q '${thisdir}/macros/plot_MVA/make_mva_plots.C(\"${mvafile_rho}\")'"
 mv dataset/* ${mva_results_rho}
 
-eval "root -l -b -q '${thisdir}/TMVA/TMVA_${cat}.C(\"${mvafile_phi}\", \"phi\")'"
+eval "root -l -b -q '${thisdir}/TMVA/TMVA_${cat}.C(\"${mvafile_phi}\", \"phi\")' > ${mvalog_phi}"
 eval "root -l -b -q '${thisdir}/macros/plot_MVA/make_mva_plots.C(\"${mvafile_phi}\")'"
 mv dataset/* ${mva_results_phi}
