@@ -1,7 +1,7 @@
 #!/bin/bash
 
 batch=${1}
-cat=VBF
+cat=GF
 
 base='/work/submit/kyoon/RareHiggs/test/MVAoutput/2023'
 top_dir=$(printf '%(%^b%d)T\n' -1)
