@@ -6,8 +6,9 @@ using namespace RooFit;
 void datacompare_norm(const char* Meson) {
 
     string date;
-    if (strcmp(Meson, "Rho") == 0) date = "230309";
-    if (strcmp(Meson, "Phi") == 0) date = "230310";
+    const char* meson;
+    if (strcmp(Meson, "Rho") == 0) {date = "230309"; meson = "rho";}
+    if (strcmp(Meson, "Phi") == 0) {date = "230310"; meson = "phi";}
 
     // Files
     const char* Torino_presel_filename = Form("/work/submit/mariadlf/cards_march9/%s_%sGammaLimit/workspace_STAT_%s_GFpreselection_2018.root", date.c_str(), Meson, Meson);
@@ -185,25 +186,33 @@ void datacompare_norm(const char* Meson) {
     //
     TCanvas c_ggH_hist("c", "c", 1200, 800);
     ggH_sig_stack.Draw("nostack p0");
-    c_ggH_hist.BuildLegend(0.9, 0.9, 0.65, 0.75);
+    ggH_sig_stack.GetXaxis()->SetTitle(Form("m_{#%s#gamma} [GeV/c^{2}]", meson));
+    ggH_sig_stack.GetYaxis()->SetTitle("Normalized Events/1 GeV");
+    c_ggH_hist.BuildLegend(0.9, 0.9, 0.55, 0.83);
     c_ggH_hist.SaveAs(Form("compare/presel_normalized_signal_ggH_hist_compare_GF_%s.png", Meson));
     c_ggH_hist.Close();
 
     TCanvas c_VBF_hist("c", "c", 1200, 800);
     VBF_sig_stack.Draw("nostack p0");
-    c_VBF_hist.BuildLegend(0.9, 0.9, 0.65, 0.75);
+    VBF_sig_stack.GetXaxis()->SetTitle(Form("m_{#%s#gamma} [GeV/c^{2}]", meson));
+    VBF_sig_stack.GetYaxis()->SetTitle("Normalized Events/1 GeV");
+    c_VBF_hist.BuildLegend(0.9, 0.9, 0.55, 0.83);
     c_VBF_hist.SaveAs(Form("compare/presel_normalized_signal_VBF_hist_compare_GF_%s.png", Meson));
     c_VBF_hist.Close();
 
     // TCanvas c_comb_hist;
     // comb_sig_stack.Draw("nostack p0");
-    // c_comb_hist.BuildLegend(0.95, 0.9, 0.7, 0.75);
+    // comb_sig_stack.GetXaxis()->SetTitle(Form("m_{#%s#gamma} [GeV/c^{2}]", meson));
+    // comb_sig_stack.GetYaxis()->SetTitle("Normalized Events/1 GeV");
+    // c_comb_hist.BuildLegend(0.95, 0.9, 0.55, 0.83);
     // c_comb_hist.SaveAs(Form("compare/presel_normalized_signal_comb_hist_compare_GF_%s.png", Meson));
     // c_comb_hist.Close();
     
     TCanvas c_data_hist("c", "c", 1200, 800);
     bkg_stack.Draw("nostack e1p0");
-    c_data_hist.BuildLegend(0.37, 0.27, 0.12, 0.12);
+    bkg_stack.GetXaxis()->SetTitle(Form("m_{#%s#gamma} [GeV/c^{2}]", meson));
+    bkg_stack.GetYaxis()->SetTitle("Normalized Events/1 GeV");
+    c_data_hist.BuildLegend(0.47, 0.19, 0.12, 0.12);
     c_data_hist.SaveAs(Form("compare/presel_normalized_bkg_observed_data_hist_compare_GF_%s.png", Meson));
     c_data_hist.Close();
 }

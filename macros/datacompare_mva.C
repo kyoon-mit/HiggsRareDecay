@@ -6,8 +6,9 @@ using namespace RooFit;
 void datacompare_mva(const char* Meson) {
 
     string date;
-    if (strcmp(Meson, "Rho") == 0) date = "230309";
-    if (strcmp(Meson, "Phi") == 0) date = "230310";
+    const char* meson;
+    if (strcmp(Meson, "Rho") == 0) {date = "230309"; meson = "rho";}
+    if (strcmp(Meson, "Phi") == 0) {date = "230310"; meson = "phi";}
 
     // Files
     const char* Torino_presel_filename = Form("/work/submit/mariadlf/cards_march9/%s_%sGammaLimit/workspace_STAT_%s_GFcat_bdt0_2018.root", date.c_str(), Meson, Meson);
@@ -50,29 +51,6 @@ void datacompare_mva(const char* Meson) {
     RooDataHist* MIT_ggH_data = (RooDataHist*) MIT_workspace_sig->data("datahist_GFcat_ggH");
     RooDataHist* MIT_VBF_data = (RooDataHist*) MIT_workspace_sig->data("datahist_GFcat_VBFH");
     RooDataHist* MIT_observed_data = (RooDataHist*) MIT_workspace_bkg->data(Form("datahist_%sCat_GFcat", Meson));
-
-    // PDFs
-    // RooAbsPdf* Torino_ggH_pdf = Torino_workspace->pdf(Form("crystal_ball_%s_GFcat_bdt0_ggH", Meson));
-    // RooAbsPdf* Torino_VBF_pdf = Torino_workspace->pdf(Form("crystal_ball_%s_GFcat_bdt0_VBF", Meson));
-    // RooAbsPdf* Torino_bkg_pdf1 = Torino_workspace->pdf("chebychev_GFcat_bdt0_bkg");
-    // RooAbsPdf* Torino_bkg_pdf2;
-    // RooAbsPdf* MIT_ggH_pdf = MIT_workspace_sig->pdf(Form("crystal_ball_%sCat_GFcat_ggH", Meson));
-    // RooAbsPdf* MIT_VBF_pdf = MIT_workspace_sig->pdf(Form("crystal_ball_%sCat_GFcat_VBFH", Meson));
-    // RooAbsPdf* MIT_bkg_pdf1 = MIT_workspace_bkg->pdf(Form("chebychev3_%sCat_GFcat", Meson));
-    // RooAbsPdf* MIT_bkg_pdf2 = MIT_workspace_bkg->pdf(Form("bern3_%sCat_GFcat", Meson));
-    
-    // // RooPlots
-    // RooRealVar* x = MIT_workspace_sig->var("mh");
-    // RooPlot* ggH_frame = x->frame();
-    // RooPlot* VBF_frame = x->frame();
-    // RooPlot* bkg_frame = x->frame();
-
-    // Torino_ggH_pdf->plotOn(ggH_frame, LineColor(kRed), LineStyle(kDashed));
-    // MIT_ggH_pdf->plotOn(ggH_frame, LineColor(kBlue), LineStyle(kDashed));
-    // Torino_VBF_pdf->plotOn(VBF_frame, LineColor(kRed), LineStyle(kDashed));
-    // MIT_VBF_pdf->plotOn(VBF_frame, LineColor(kBlue), LineStyle(kDashed));
-    // Torino_bkg_pdf1->plotOn(bkg_frame, LineColor(kRed), LineStyle(kDashed));
-    // MIT_bkg_pdf1->plotOn(bkg_frame, LineColor(kBlue), LineStyle(kDashed));
 
     // Histograms
     /* Book new histograms */
@@ -151,6 +129,11 @@ void datacompare_mva(const char* Meson) {
     comb_sig_stack.Add(MIT_comb_signal);
     bkg_stack.Add(Torino_data_bkg);
     bkg_stack.Add(MIT_data_bkg);
+
+    
+    
+    
+    
     
     // Draw & Save
     // TCanvas c_ggH_fit("c", "c", 1200, 800);
@@ -174,25 +157,33 @@ void datacompare_mva(const char* Meson) {
     //
     TCanvas c_ggH_hist("c", "c", 1200, 800);
     ggH_sig_stack.Draw("nostack p0");
-    c_ggH_hist.BuildLegend(0.9, 0.9, 0.65, 0.75);
+    ggH_sig_stack.GetXaxis()->SetTitle(Form("m_{#%s#gamma} [GeV/c^{2}]", meson));
+    ggH_sig_stack.GetYaxis()->SetTitle("Events/1 GeV");
+    c_ggH_hist.BuildLegend(0.9, 0.9, 0.75, 0.83);
     c_ggH_hist.SaveAs(Form("compare/mva_signal_ggH_hist_compare_GF_%s.png", Meson));
     c_ggH_hist.Close();
 
     TCanvas c_VBF_hist("c", "c", 1200, 800);
     VBF_sig_stack.Draw("nostack p0");
-    c_VBF_hist.BuildLegend(0.9, 0.9, 0.65, 0.75);
+    VBF_sig_stack.GetXaxis()->SetTitle(Form("m_{#%s#gamma} [GeV/c^{2}]", meson));
+    VBF_sig_stack.GetYaxis()->SetTitle("Events/1 GeV");
+    c_VBF_hist.BuildLegend(0.9, 0.9, 0.75, 0.83);
     c_VBF_hist.SaveAs(Form("compare/mva_signal_VBF_hist_compare_GF_%s.png", Meson));
     c_VBF_hist.Close();
 
     // TCanvas c_comb_hist;
     // comb_sig_stack.Draw("nostack p0");
+    // comb_sig_stack.GetXaxis()->SetTitle(Form("m_{#%s#gamma} [GeV/c^{2}]", meson));
+    // comb_sig_stack.GetYaxis()->SetTitle("Events/1 GeV");
     // c_comb_hist.BuildLegend(0.95, 0.9, 0.7, 0.75);
     // c_comb_hist.SaveAs(Form("compare/mva_signal_comb_hist_compare_GF_%s.png", Meson));
     // c_comb_hist.Close();
     
     TCanvas c_data_hist("c", "c", 1200, 800);
     bkg_stack.Draw("nostack e1p0");
-    c_data_hist.BuildLegend(0.95, 0.9, 0.7, 0.75);
+    bkg_stack.GetXaxis()->SetTitle(Form("m_{#%s#gamma} [GeV/c^{2}]", meson));
+    bkg_stack.GetYaxis()->SetTitle("Events/1 GeV");
+    c_data_hist.BuildLegend(0.9, 0.9, 0.75, 0.83);
     c_data_hist.SaveAs(Form("compare/mva_bkg_observed_data_hist_compare_GF_%s.png", Meson));
     c_data_hist.Close();
 }
