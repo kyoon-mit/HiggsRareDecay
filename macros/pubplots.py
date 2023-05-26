@@ -54,18 +54,33 @@ class pubplots:
         self.frameLabelSize = 0.03
         self.frameAxisTitleOffset = 1.8
         self.frameFont = 10
+        self.canvasHeight = 600
+        self.canvasWidth = 800
+        self.canvasTopMargin = .08
+        self.canvasBottomMargin = .12
+        self.canvasLeftMargin = .12
+        self.canvasRightMargin = .04
         self.dataMarkerStyle = kFullCircle
-        self.dataErrorBarStyle = ''
+        self.dataMarkerSize = .5
+        self.dataXErrorBarSize = 0 # TODO
+        self.bkg1SigmaErrorFillColor = kGreen + 1 # Brazilian
+        self.bkg2SigmaErrorFillColor = kOrange # Brazilian
+        self.bkgFitFillColor = kWhite
+        self.bkgFitFillStyle = 0 # Transparent
+        self.bkgFitLineColor = kRed
+        self.bkgFitLineStyle = kDotted
         self.bkgFitLineWidth = 2
-        self.bkgFitLineColor = kBlack
-        self.bkgErrorFillColor = kBlue-9
-        self.bkgFillColor = kBlue-4
-        self.sigFillColor = kOrange+8
+        self.sigFitFillColor = kWhite
+        self.sigFitFillStyle = 0 # Transparent
+        self.sigFitLineColor = kRed
+        self.sigFitLineStyle = kSolid
+        self.sigFitLineWidth = 2
 
         # Attributes related to the legend
         self.dataEntry = ''
         self.bkgFitEntry = ''
-        self.bkgErrorEntry = ''
+        self.bkgSigma1ErrorEntry = ''
+        self.bkgSigma2ErrorEntry = ''
         self.sigEntry = ''
         self.legend_xl = .25
         self.legend_xr = .6
@@ -144,18 +159,21 @@ class pubplots:
         """
         self.Nevents = Nevents
 
-    def addLegendEntries(self, dataEntry, bkgFitEntry, bkgErrorEntry, sigEntry):
+    def addLegendEntries(self, dataEntry, bkgFitEntry, bkgSigma1ErrorEntry,
+                         bkgSigma2ErrorEntry, sigEntry):
         """Enter texts for the legend.
 
         Args:
             dataEntry (str):
             bkgFitEntry (str):
-            bkgErrorEntry (str):
+            bkgSigma1ErrorEntry (str):
+            bkgSigma2ErrorEntry (str):
             sigEntry (str):
         """
         self.dataEntry = dataEntry
         self.bkgFitEntry = bkgFitEntry
-        self.bkgErrorEntry = bkgErrorEntry
+        self.bkgSigma1ErrorEntry = bkgSigma1ErrorEntry
+        self.bkgSigma2ErrorEntry = bkgSigma2ErrorEntry
         self.sigEntry = sigEntry
 
     def makePlot(self, saveName, Nbins, rangeLow, rangeHigh, residuals=False):
@@ -170,14 +188,25 @@ class pubplots:
                 Defaults to False.
         """
         # Create canvas
-        c_width = 1200
-        c_height = 1200
-        if residuals: c_height = 1500
+        c_width = self.canvasWidth
+        c_height = self.canvasHeight
+        if residuals: c_height *= 1.25
+        c = TCanvas('c', 'c', c_width, c_height)
+        c.SetFillColor(0)
+        c.SetBorderMode(0)
+        c.SetFrameFillStyle(0)
+        c.SetFrameBorderMode(0)
+        c.SetLeftMargin(self.canvasLeftMargin)
+        c.SetRightMargin(self.canvasRightMargin)
+        c.SetTopMargin(self.canvasTopMargin)
+        c.SetBottomMargin(self.canvasBottomMargin)
+        c.SetTickx(0)
+        c.SetTicky(0)
 
         # Create frame
         plotFrame = self.keyVar.frame()
         plotFrame.SetXTitle('{} [{}]'.format(self.keyVar.GetTitle(), self.keyVar.getUnit()))
-        plotFrame.SetYTitle('Events/{} GeV'.format(int((rangeHigh - rangeLow)/Nbins)))
+        plotFrame.SetYTitle('Events/{} {}'.format(int((rangeHigh - rangeLow)/Nbins), self.keyVar.getUnit()))
         plotFrame.SetLabelSize(self.frameLabelSize, 'XY')
         plotFrame.GetXaxis().SetTitleSize(self.frameLabelSize)
         plotFrame.GetXaxis().SetTitleOffset(self.frameAxisTitleOffset-0.5)
@@ -208,49 +237,68 @@ class pubplots:
 
         # Plot the data
         self.data.plotOn(plotFrame,
-                         RooFit.Binning(Nbins))
+                         RooFit.Binning(Nbins),
+                         RooFit.MarkerSize(self.dataMarkerSize),
+                         RooFit.MarkerStyle(self.dataMarkerStyle),
+                         RooFit.XErrorSize(self.dataXErrorBarSize))
 
-        # Plot bkg only
-        ### Plot bkg line
-        self.bkgPDF.plotOn(plotFrame,
-                           RooFit.LineColor(self.bkgFitLineColor),
-                           RooFit.LineWidth(self.bkgFitLineWidth),
-                           RooFit.DrawOption('L'),
-                           RooFit.MoveToBack())
+        # # Plot bkg only
+        # ### Plot bkg line
+        # self.bkgPDF.plotOn(plotFrame,
+        #                    RooFit.LineColor(self.bkgFitLineColor),
+        #                    RooFit.LineStyle(self.bkgFitLineStyle),
+        #                    RooFit.LineWidth(self.bkgFitLineWidth),
+        #                    RooFit.DrawOption('L'),
+        #                    RooFit.MoveToBack())
+
+        # Plot sig + bkg model
+        combPDF.plotOn(plotFrame,
+                    #    RooFit.FillColor(self.sigFitFillColor),
+                    #    RooFit.FillStyle(self.sigFitFillStyle),
+                       RooFit.LineColor(self.sigFitLineColor),
+                       RooFit.LineStyle(self.sigFitLineStyle),
+                       RooFit.LineWidth(self.sigFitLineWidth),
+                       RooFit.DrawOption('L'),
+                       RooFit.Name('comb'),
+                       RooFit.MoveToBack())
+
+        ### Plot bkg only model
+        combPDF.plotOn(plotFrame,
+                       RooFit.FillColor(self.bkgFitFillColor),
+                       RooFit.FillStyle(self.bkgFitFillStyle),
+                       RooFit.LineColor(self.bkgFitLineColor),
+                       RooFit.LineStyle(self.bkgFitLineStyle),
+                       RooFit.Components('bkgPDF'),
+                       RooFit.DrawOption('L'),
+                       RooFit.Name('bkg'),
+                       RooFit.MoveToBack())
 
         ### Plot bkg uncertainty
         self.bkgPDF.plotOn(plotFrame,
-                           RooFit.FillColor(self.bkgErrorFillColor),
-                           RooFit.LineColor(self.bkgFitLineColor),
+                           RooFit.FillColor(self.bkg1SigmaErrorFillColor),
                            RooFit.VisualizeError(bkgFitResult, 1),
                            RooFit.VisualizeError(bkgFitResult, -1),
                            RooFit.DrawOption('F'),
                            RooFit.Name('bkgPlusMinus1Sigma'),
                            RooFit.MoveToBack())
 
-        ### Plot bkg color
-        combPDF.plotOn(plotFrame,
-                       RooFit.FillColor(self.bkgFillColor),
-                       RooFit.LineColor(self.bkgFitLineColor),
-                       RooFit.Components('bkgPDF'),
-                       RooFit.DrawOption('F'),
-                       RooFit.Name('bkg'),
-                       RooFit.MoveToBack())
+        self.bkgPDF.plotOn(plotFrame,
+                           RooFit.FillColor(self.bkg2SigmaErrorFillColor),
+                           RooFit.VisualizeError(bkgFitResult, 2),
+                           RooFit.VisualizeError(bkgFitResult, -2),
+                           RooFit.DrawOption('F'),
+                           RooFit.Name('bkgPlusMinus2Sigma'),
+                           RooFit.MoveToBack())
 
-        # Plot sig + bkg model
-        combPDF.plotOn(plotFrame,
-                       RooFit.FillColor(self.sigFillColor),
-                       RooFit.LineColor(self.bkgFitLineColor),
-                       RooFit.DrawOption('F'),
-                       RooFit.Name('comb'),
-                       RooFit.MoveToBack())
+
 
         # Make Legend
         legend = TLegend(self.legend_xl, self.legend_yb, self.legend_xr, self.legend_yt)
         legend.AddEntry(plotFrame.findObject('h_data'), self.dataEntry, 'pe')
-        legend.AddEntry(plotFrame.findObject('bkgPlusMinus1Sigma'), self.bkgErrorEntry, 'lf')
-        legend.AddEntry(plotFrame.findObject('bkg'), self.bkgFitEntry, 'f')
-        legend.AddEntry(plotFrame.findObject('comb'), self.sigEntry, 'f')
+        legend.AddEntry(plotFrame.findObject('bkgPlusMinus1Sigma'), self.bkgSigma1ErrorEntry, 'f')
+        legend.AddEntry(plotFrame.findObject('bkgPlusMinus2Sigma'), self.bkgSigma2ErrorEntry, 'f')
+        legend.AddEntry(plotFrame.findObject('bkg'), self.bkgFitEntry, 'l')
+        legend.AddEntry(plotFrame.findObject('comb'), self.sigEntry, 'l')
         legend.SetTextAlign(12)
         legend.SetTextSize(self.legendTextSize)
 
@@ -264,7 +312,6 @@ class pubplots:
             plotFrame.SetXTitle('')
 
         # Draw
-        c = TCanvas('c', 'c', c_width, c_height)
         if not residuals:
             plotFrame.Draw()
             legend.Draw()
@@ -300,7 +347,8 @@ if __name__=="__main__":
     Plots.setSignalNevents(25.)
     Plots.addLegendEntries(dataEntry='Data',
                            bkgFitEntry='Background Only Model',
-                           bkgErrorEntry='Background Fit #pm 1#sigma',
+                           bkgSigma1ErrorEntry='Background #pm 1#sigma',
+                           bkgSigma2ErrorEntry='Background #pm 2#sigma',
                            sigEntry='H#rightarrow#rho#gamma BR=...')
     Plots.makePlot('test.png',
                    Nbins=70,
