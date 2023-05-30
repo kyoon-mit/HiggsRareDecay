@@ -260,6 +260,7 @@ class pubplots:
                        RooFit.LineStyle(self.bkgFitLineStyle),
                        RooFit.Components('bkgPDF'),
                        RooFit.DrawOption('L'),
+                       RooFit.Binning(300),
                        RooFit.Name('bkg'),
                        RooFit.MoveToBack())
 
@@ -277,6 +278,7 @@ class pubplots:
                            RooFit.VisualizeError(bkgFitResult, 2),
                            RooFit.VisualizeError(bkgFitResult, -2),
                            RooFit.DrawOption('F'),
+                           RooFit.Precision(1e-4),
                            RooFit.Name('bkgPlusMinus2Sigma'),
                            RooFit.MoveToBack())
 
@@ -286,75 +288,48 @@ class pubplots:
             residFrame.SetTitle('')
             residFrame.SetYTitle('Data - Bkg')
             residFrame.SetXTitle('{} [{}]'.format(self.keyVar.GetTitle(), self.keyVar.getUnit()))
-
-            residFrame.addPlotable(plotFrame.residHist('h_data', 'bkg', True), 'P')
+            residFrame.addPlotable(plotFrame.residHist('h_data', 'bkg', False), 'P')
 
             # Plot signal - bkg
             self.sigPDF.plotOn(residFrame,
-                           RooFit.LineColor(self.sigFitLineColor),
-                           RooFit.LineStyle(self.sigFitLineStyle),
-                           RooFit.LineWidth(self.sigFitLineWidth),
-                           RooFit.DrawOption('L'),
-                           RooFit.Name('residSigPDF'),
-                           RooFit.MoveToBack())
-
-
+                               RooFit.LineColor(self.sigFitLineColor),
+                               RooFit.LineStyle(self.sigFitLineStyle),
+                               RooFit.LineWidth(self.sigFitLineWidth),
+                               RooFit.DrawOption('L'),
+                               RooFit.Name('residSigPDF'),
+                               RooFit.MoveToBack())
+            
             # Plot bkg - bkg (i.e. 0)
             const_zero = RooRealVar('c1', 'c1', 0, -1.0, 1.0)
             const_zero.setConstant()
             const_zero.plotOn(residFrame,
-                        RooFit.LineColor(self.bkgFitLineColor),
-                        RooFit.LineStyle(self.bkgFitLineStyle),
-                        RooFit.LineWidth(self.bkgFitLineWidth),
-                        RooFit.DrawOption('L'),
-                        RooFit.Name('residBkgPDF'),
-                        RooFit.MoveToBack())
+                              RooFit.LineColor(self.bkgFitLineColor),
+                              RooFit.LineStyle(self.bkgFitLineStyle),
+                              RooFit.LineWidth(self.bkgFitLineWidth),
+                              RooFit.DrawOption('L'),
+                              RooFit.Name('residBkgPDF'),
+                              RooFit.MoveToBack())
+            
+            bkgCentral = plotFrame.findObject('bkg')
+            bkg1Sigma = plotFrame.findObject('bkgPlusMinus1Sigma')
+            bkg2Sigma = plotFrame.findObject('bkgPlusMinus2Sigma')
+            bkg1SigmaX = bkg1Sigma.GetX()
+            bkg1SigmaY = bkg1Sigma.GetY()
+            bkg2SigmaX = bkg2Sigma.GetX()
+            bkg2SigmaY = bkg2Sigma.GetY()
+            bkgNPoints = bkg1Sigma.GetN()
+            bkg1SigmaTGraph = TGraph(bkgNPoints)
+            bkg2SigmaTGraph = TGraph(bkgNPoints)
+            params = RooArgList(self.bkgPDF.getParameters(RooArgSet(self.keyVar)))
+            for i in range(0, bkgNPoints):
+                bkg1SigmaTGraph.SetPoint(i, bkg1SigmaX[i], bkg1SigmaY[i] - bkgCentral.Eval(bkg1SigmaX[i]))
+                bkg2SigmaTGraph.SetPoint(i, bkg2SigmaX[i], bkg2SigmaY[i] - bkgCentral.Eval(bkg2SigmaX[i]))
+            bkg1SigmaTGraph.SetFillColor(self.bkg1SigmaErrorFillColor)
+            bkg2SigmaTGraph.SetFillColor(self.bkg2SigmaErrorFillColor)
             
             # Plot bkg uncertainty - bkg
-            self.bkgPDF.plotOn(residFrame,
-                           RooFit.FillColor(self.bkg1SigmaErrorFillColor),
-                           RooFit.VisualizeError(bkgFitResult, 1),
-                           RooFit.VisualizeError(bkgFitResult, -1),
-                           RooFit.DrawOption('F'),
-                           RooFit.Name('bkgPlusMinus1Sigma'),
-                           RooFit.MoveToBack())
-            
-            bkgFitResult.Print()
-            print('-------------------------------\n\n\n\n')
-
-            # combPDF.plotOn(residFrame,
-            #                RooFit.FillColor(self.bkgFitFillColor),
-            #                RooFit.FillStyle(self.bkgFitFillStyle),
-            #                RooFit.LineColor(self.bkgFitLineColor),
-            #                RooFit.LineStyle(self.bkgFitLineStyle),
-            #                RooFit.Components('bkgPDF'),
-            #                RooFit.DrawOption('L'),
-            #                RooFit.Name('bkg'),
-            #                RooFit.MoveToBack())
-
-            # self.bkgPDF.plotOn(residFrame,
-            #                    RooFit.FillColor(self.bkg1SigmaErrorFillColor),
-            #                    RooFit.VisualizeError(bkgFitResult, 1),
-            #                    RooFit.VisualizeError(bkgFitResult, -1),
-            #                    RooFit.DrawOption('F'),
-            #                    RooFit.Name('bkgPlusMinus1Sigma'),
-            #                    RooFit.MoveToBack())
-
-            # self.bkgPDF.plotOn(residFrame,
-            #                    RooFit.FillColor(self.bkg2SigmaErrorFillColor),
-            #                    RooFit.VisualizeError(bkgFitResult, 2),
-            #                    RooFit.VisualizeError(bkgFitResult, -2),
-            #                    RooFit.DrawOption('F'),
-            #                    RooFit.Name('bkgPlusMinus2Sigma'),
-            #                    RooFit.MoveToBack())
-
-            # self.bkgPDF.plotOn(residFrame,
-            #                    RooFit.LineColor(self.bkgFitLineColor),
-            #                    RooFit.LineStyle(self.bkgFitLineStyle),
-            #                    RooFit.LineWidth(self.bkgFitLineWidth),
-            #                    RooFit.Normalization(1),
-            #                    RooFit.DrawOption('L'),
-            #                    RooFit.MoveToBack())
+            # residFrame.addPlotable(bkg1SigmaTGraph, 'CF')
+            # residFrame.addPlotable(bkg2SigmaTGraph, 'CF')
 
         # Make Legend
         legend = TLegend(self.legend_xl, self.legend_yb, self.legend_xr, self.legend_yt)
@@ -393,10 +368,11 @@ class pubplots:
             pad1.cd()
             plotFrame.Draw()
             legend.Draw()
-            CMS_lumi.CMS_lumi(c, self.iPeriod, self.iPos)  # Draw lumi and sqrt(s) info
+            CMS_lumi.CMS_lumi(pad1, self.iPeriod, self.iPos)  # Draw lumi and sqrt(s) info
             pad2.cd()
-            residFrame.Draw()
-            # TODO: Draw fit.
+            bkg2SigmaTGraph.Draw('A CF')
+            bkg1SigmaTGraph.Draw('SAME CF')
+            residFrame.Draw('SAME')            
             c.cd()
             pad1.Draw()
             pad2.Draw()
