@@ -9,8 +9,7 @@ class pubplots:
     must be downloaded from this TWiki page:
     https://twiki.cern.ch/twiki/bin/viewauth/CMS/Internal/FigGuidelines
 
-    The __init__ method sets the global style to the default TDRStyle.
-    It accepts arguments to pass onto the CMS_lumi setting.
+    The __init__ method accepts arguments to pass onto the CMS_lumi setting.
     
     Args:
         iPeriod (int): Calculated as follows.
@@ -18,25 +17,10 @@ class pubplots:
         iPos (int): Alignment for the luminosity text
 
     Attributes:
-        keyVar (RooRealVar): Key Variable, i.e. mass of the Higgs candidate.
-        data (RooDataHist or RooDataSet): Data.
-        sigPDF (RooAbsPdf): Signal PDF.
-        bkgPDF (RooAbsPdf): Background PDF.
-        combPDF (RooRealSumPdf): Combined signal + background PDF.
-        Nsig (RooRealVar):
-        Nbkg (RooRealVar): 
-        Nevents (int):
-        dir (str): The path to the directory where the ROOT files reside.
-        bkgFitEntry (str):
-        bkgErrorEntry (str):
-        sigEntry (str):
-        iPeriod (int): iPeriod.
-        iPos (int): iPos.
+        (self explanatory)
     """
 
     def __init__(self, iPeriod, iPos):
-        tdrstyle.setTDRStyle()
-
         # Attribute for file I/O
         self.dir = ''
 
@@ -83,10 +67,10 @@ class pubplots:
         self.bkgSigma1ErrorEntry = ''
         self.bkgSigma2ErrorEntry = ''
         self.sigEntry = ''
-        self.legend_xl = .15
-        self.legend_xr = .55
-        self.legend_yb = .3
-        self.legend_yt = .6
+        self.legend_xl = .2
+        self.legend_xr = .6
+        self.legend_yb = .1
+        self.legend_yt = .4
         self.legendTextSize = .03
         
         # Attributes for CMS-style texts
@@ -101,7 +85,7 @@ class pubplots:
         """
         self.dir = directory
 
-    def getKeyVar(self, fileName, workspaceName, varName, varTitle, unit='GeV'):
+    def getKeyVar(self, fileName, workspaceName, varName, varTitle, rangeLow, rangeHigh, unit='GeV'):
         """
         """
         varFile = TFile.Open(path.join(self.dir, fileName), 'READ')
@@ -109,6 +93,7 @@ class pubplots:
         self.keyVar = w.var(varName)
         self.keyVar.SetTitle(varTitle)
         self.keyVar.setUnit(unit)
+        self.keyVar.setRange(float(rangeLow), float(rangeHigh))
 
     def getSignalPDF(self, signalFileName, workspaceName, signalPDFName):
         """Method to get the signal PDF.
@@ -177,7 +162,7 @@ class pubplots:
         self.bkgSigma2ErrorEntry = bkgSigma2ErrorEntry
         self.sigEntry = sigEntry
 
-    def makePlot(self, saveName, Nbins, rangeLow, rangeHigh, residuals=False):
+    def makePlot(self, saveName, Nbins, rangeLow, rangeHigh, residuals=False, residMin=-250, residMax=250):
         """Create and save the final plot.
 
         Args:
@@ -187,6 +172,12 @@ class pubplots:
             rangeHigh (float): Upper range of the region.
             residuals (bool, optional): Whether to make plot of residuals.
                 Defaults to False.
+            residMin (float, optional): If residuals is True, then this sets
+                the lower limit for the y axis on the residual plot.
+                Defaults to -250.
+            residMax (float, optional: If residuals is True, then this sets
+                the lower limit for the y axis on the residual plot.
+                Defaults to 250.
         """
         tdrstyle.setTDRStyle()
         # Create canvas
@@ -203,10 +194,14 @@ class pubplots:
         c.SetTickx(0)
         c.SetTicky(0)
 
+        # Set labels
+        xTitle = '{} [{}]'.format(self.keyVar.GetTitle(), self.keyVar.getUnit())
+        yTitle = 'Events/{} {}'.format(int((rangeHigh - rangeLow)/Nbins), self.keyVar.getUnit())
+
         # Create frame
         plotFrame = self.keyVar.frame()
-        plotFrame.SetXTitle('{} [{}]'.format(self.keyVar.GetTitle(), self.keyVar.getUnit()))
-        plotFrame.SetYTitle('Events/{} {}'.format(int((rangeHigh - rangeLow)/Nbins), self.keyVar.getUnit()))
+        plotFrame.SetXTitle(xTitle)
+        plotFrame.SetYTitle(yTitle)
         # plotFrame.SetLabelSize(self.frameLabelSize, 'XY')
         # plotFrame.GetXaxis().SetTitleSize(self.frameLabelSize)
         # plotFrame.GetXaxis().SetTitleOffset(self.frameAxisTitleOffset-0.5)
@@ -260,7 +255,6 @@ class pubplots:
                        RooFit.LineStyle(self.bkgFitLineStyle),
                        RooFit.Components('bkgPDF'),
                        RooFit.DrawOption('L'),
-                       RooFit.Binning(300),
                        RooFit.Name('bkg'),
                        RooFit.MoveToBack())
 
@@ -284,10 +278,19 @@ class pubplots:
 
         # (Optional) Make plots for residuals
         if residuals:
+            # residFrame.SetLabelSize(self.frameLabelSize*4, 'XY')
+            # residFrame.GetXaxis().SetTitleSize(self.frameLabelSize)
+            # residFrame.GetXaxis().SetTitleOffset(self.frameAxisTitleOffset-0.5)
+            # residFrame.GetYaxis().SetTitleSize(self.frameLabelSize)
+            # residFrame.GetYaxis().SetTitleOffset(self.frameAxisTitleOffset)
+            plotFrame.SetXTitle('')
+            plotFrame.SetLabelSize(0, 'X')
+
+            yTitle = 'Data - Bkg'
             residFrame = self.keyVar.frame()
             residFrame.SetTitle('')
-            residFrame.SetYTitle('Data - Bkg')
-            residFrame.SetXTitle('{} [{}]'.format(self.keyVar.GetTitle(), self.keyVar.getUnit()))
+            residFrame.SetXTitle(xTitle)
+            residFrame.SetYTitle(yTitle)
             residFrame.addPlotable(plotFrame.residHist('h_data', 'bkg', False), 'P')
 
             # Plot signal - bkg
@@ -310,6 +313,7 @@ class pubplots:
                               RooFit.Name('residBkgPDF'),
                               RooFit.MoveToBack())
             
+            # Make plots of bkg uncertainty - bkg
             bkgCentral = plotFrame.findObject('bkg')
             bkg1Sigma = plotFrame.findObject('bkgPlusMinus1Sigma')
             bkg2Sigma = plotFrame.findObject('bkgPlusMinus2Sigma')
@@ -325,11 +329,18 @@ class pubplots:
                 bkg1SigmaTGraph.SetPoint(i, bkg1SigmaX[i], bkg1SigmaY[i] - bkgCentral.Eval(bkg1SigmaX[i]))
                 bkg2SigmaTGraph.SetPoint(i, bkg2SigmaX[i], bkg2SigmaY[i] - bkgCentral.Eval(bkg2SigmaX[i]))
             bkg1SigmaTGraph.SetFillColor(self.bkg1SigmaErrorFillColor)
+            bkg1SigmaTGraph.GetXaxis().SetTitle(xTitle)
+            bkg1SigmaTGraph.GetYaxis().SetTitle(yTitle)
+            bkg1SigmaTGraph.GetXaxis().SetRangeUser(rangeLow, rangeHigh)
+            bkg1SigmaTGraph.SetMinimum(residMin)
+            bkg1SigmaTGraph.SetMaximum(residMax)
             bkg2SigmaTGraph.SetFillColor(self.bkg2SigmaErrorFillColor)
-            
-            # Plot bkg uncertainty - bkg
-            # residFrame.addPlotable(bkg1SigmaTGraph, 'CF')
-            # residFrame.addPlotable(bkg2SigmaTGraph, 'CF')
+            bkg2SigmaTGraph.GetXaxis().SetTitle(xTitle)
+            bkg2SigmaTGraph.GetYaxis().SetTitle(yTitle)
+            bkg2SigmaTGraph.SetMinimum(residMin)
+            bkg2SigmaTGraph.SetMaximum(residMax)
+            bkg2SigmaTGraph.GetXaxis().SetRangeUser(rangeLow, rangeHigh)
+
 
         # Make Legend
         legend = TLegend(self.legend_xl, self.legend_yb, self.legend_xr, self.legend_yt)
@@ -339,18 +350,8 @@ class pubplots:
         legend.AddEntry(plotFrame.findObject('bkg'), self.bkgFitEntry, 'l')
         legend.AddEntry(plotFrame.findObject('comb'), self.sigEntry, 'l')
         legend.SetTextAlign(12)
+        legend.SetBorderSize(0)
         # legend.SetTextSize(self.legendTextSize)
-
-        # Add residuals
-        if residuals:
-            ####### TODO: ADD uncertainty of the bkgPDF to the residFrame
-            # residFrame.SetLabelSize(self.frameLabelSize*4, 'XY')
-            # residFrame.GetXaxis().SetTitleSize(self.frameLabelSize)
-            # residFrame.GetXaxis().SetTitleOffset(self.frameAxisTitleOffset-0.5)
-            # residFrame.GetYaxis().SetTitleSize(self.frameLabelSize)
-            # residFrame.GetYaxis().SetTitleOffset(self.frameAxisTitleOffset)
-            plotFrame.SetXTitle('')
-            plotFrame.SetLabelSize(0, 'X')
 
         # Draw
         if not residuals:
@@ -362,9 +363,8 @@ class pubplots:
             print(pad_height_ratio)
             pad1 = TPad('p1', 'p1', 0, pad_height_ratio, 1, 1)
             pad2 = TPad('p2', 'p2', 0, 0, 1, pad_height_ratio)
-            pad1.SetBottomMargin(0.01) #
-            pad2.SetTopMargin(0) #
-            # pad2.SetBottomMargin(0.3)
+            pad1.SetBottomMargin(0.03) #
+            pad2.SetTopMargin(0.03) #
             pad1.cd()
             plotFrame.Draw()
             legend.Draw()
@@ -383,12 +383,19 @@ class pubplots:
         c.Close()
     
 if __name__=="__main__":
+
+    ### TEST 1 ###
     sigFileName = 'Signal_GFcat__RhoCat_2018_workspace.root'
     bkgFileName = 'Bkg_GFcat__RhoCat_2018_workspace.root'
 
-    Plots = pubplots(iPeriod=4, iPos=11)
+    Plots = pubplots(iPeriod=4, iPos=11) # This can change
     Plots.setFindFileDir('/work/submit/mariadlf/cards_march20/WS_MARCH20/')
-    Plots.getKeyVar(sigFileName, 'w', 'mh', varTitle='m_{#rho#gamma}')
+    Plots.getKeyVar(sigFileName,
+                    workspaceName='w',
+                    varName='mh',
+                    rangeLow=100.,
+                    rangeHigh=170.,
+                    varTitle='m_{#rho#gamma}')
     Plots.getSignalPDF(sigFileName, 'w', 'crystal_ball_RhoCat_GFcat_ggH')
     Plots.getBackgroundPDF(bkgFileName, 'w', 'bern3_RhoCat_GFcat')
     Plots.getData(bkgFileName, 'w', 'datahist_RhoCat_GFcat')
@@ -398,8 +405,39 @@ if __name__=="__main__":
                            bkgSigma1ErrorEntry='Background #pm 1#sigma',
                            bkgSigma2ErrorEntry='Background #pm 2#sigma',
                            sigEntry='H#rightarrow#rho#gamma BR=...')
-    Plots.makePlot('test.png',
+
+    Plots.makePlot('test1.pdf', # Better quality with pdf
                    Nbins=70,
                    rangeLow=100.,
                    rangeHigh=170.,
                    residuals=True)
+
+    ### TEST 2 ###
+    """
+    sigFileName = 'workspace_Rho_GFcat_2018.root'
+    bkgFileName = sigFileName # identical file
+
+    Plots = pubplots(iPeriod=4, iPos=11) # This can change
+    Plots.setFindFileDir('/work/submit/kyoon/CMSSW_10_6_27/src/hig-23-005/datacards/MIT_all/workspaces')
+    Plots.getKeyVar(sigFileName,
+                    workspaceName='w',
+                    varName='mh',
+                    rangeLow=100.,
+                    rangeHigh=170.,
+                    varTitle='m_{#rho#gamma}')
+    Plots.getSignalPDF(sigFileName, 'w', 'crystal_ball_RhoCat_GFcat_ggH')
+    Plots.getBackgroundPDF(bkgFileName, 'w', 'bern3_RhoCat_GFcat')
+    Plots.getData(bkgFileName, 'w', 'observed_data')
+    Plots.setSignalNevents(25.)
+    Plots.addLegendEntries(dataEntry='Data',
+                           bkgFitEntry='Background Only Model',
+                           bkgSigma1ErrorEntry='Background #pm 1#sigma',
+                           bkgSigma2ErrorEntry='Background #pm 2#sigma',
+                           sigEntry='H#rightarrow#rho#gamma BR=...')
+
+    Plots.makePlot('test2.png',
+                   Nbins=70,
+                   rangeLow=100.,
+                   rangeHigh=170.,
+                   residuals=True)
+    """
