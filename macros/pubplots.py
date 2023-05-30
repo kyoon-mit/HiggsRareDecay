@@ -209,8 +209,13 @@ class pubplots:
         # plotFrame.GetYaxis().SetTitleOffset(self.frameAxisTitleOffset)
 
         # Create a combined sig + bkg model
+        data_sum = 0
+        try:
+            data_sum = self.data.sum(True)
+        except:
+            data_sum = self.data.sumEntries()
         Nsig = RooRealVar('Nsig', 'Nsig', self.Nevents, 0.0, 5000.0)
-        Nbkg = RooRealVar('Nbkg', 'Nbkg', self.data.sum(True), 0.0, 10000.0)
+        Nbkg = RooRealVar('Nbkg', 'Nbkg', data_sum, 0.0, 10000.0)
         combPDF = RooRealSumPdf('comb', 'comb', RooArgList(self.sigPDF, self.bkgPDF), RooArgList(Nsig, Nbkg), True)
 
         # Get fit result from bkg pdf (better way to do this other than fitTo?)
@@ -261,6 +266,7 @@ class pubplots:
         ### Plot bkg uncertainty
         self.bkgPDF.plotOn(plotFrame,
                            RooFit.FillColor(self.bkg1SigmaErrorFillColor),
+                           RooFit.LineWidth(0),
                            RooFit.VisualizeError(bkgFitResult, 1),
                            RooFit.VisualizeError(bkgFitResult, -1),
                            RooFit.DrawOption('F'),
@@ -269,12 +275,15 @@ class pubplots:
 
         self.bkgPDF.plotOn(plotFrame,
                            RooFit.FillColor(self.bkg2SigmaErrorFillColor),
+                           RooFit.LineWidth(0),
                            RooFit.VisualizeError(bkgFitResult, 2),
                            RooFit.VisualizeError(bkgFitResult, -2),
                            RooFit.DrawOption('F'),
                            RooFit.Precision(1e-4),
                            RooFit.Name('bkgPlusMinus2Sigma'),
                            RooFit.MoveToBack())
+
+        plotFrame.SetMinimum(0)
 
         # (Optional) Make plots for residuals
         if residuals:
@@ -383,8 +392,9 @@ class pubplots:
         c.Close()
     
 if __name__=="__main__":
-
+    ### Warning: only try one example at a time ###
     ### TEST 1 ###
+    """
     sigFileName = 'Signal_GFcat__RhoCat_2018_workspace.root'
     bkgFileName = 'Bkg_GFcat__RhoCat_2018_workspace.root'
 
@@ -406,13 +416,14 @@ if __name__=="__main__":
                            bkgSigma2ErrorEntry='Background #pm 2#sigma',
                            sigEntry='H#rightarrow#rho#gamma BR=...')
 
-    Plots.makePlot('test1.pdf', # Better quality with pdf
+    Plots.makePlot('test_.pdf', # Better quality with pdf
                    Nbins=70,
                    rangeLow=100.,
                    rangeHigh=170.,
                    residuals=True)
+    """
 
-    ### TEST 2 ###
+    ### TEST 2: MIT workspace ###
     """
     sigFileName = 'workspace_Rho_GFcat_2018.root'
     bkgFileName = sigFileName # identical file
@@ -435,9 +446,42 @@ if __name__=="__main__":
                            bkgSigma2ErrorEntry='Background #pm 2#sigma',
                            sigEntry='H#rightarrow#rho#gamma BR=...')
 
-    Plots.makePlot('test2.png',
+    Plots.makePlot('test1.png',
                    Nbins=70,
                    rangeLow=100.,
                    rangeHigh=170.,
                    residuals=True)
     """
+
+    ### TEST 3: Torino workspace ###
+    sigFileName = 'workspace_STAT_Rho_GFcat_bdt0_2018.root'
+    bkgFileName = sigFileName # identical file
+
+    Plots = pubplots(iPeriod=4, iPos=11) # This can change
+    Plots.setFindFileDir('/work/submit/kyoon/CMSSW_10_6_27/src/hig-23-005/datacards/TO_ggh/workspaces')
+    Plots.getKeyVar(sigFileName,
+                    workspaceName='workspace_STAT_Rho_GFcat_bdt0_2018',
+                    varName='mesonGammaMass',
+                    rangeLow=100.,
+                    rangeHigh=170.,
+                    varTitle='m_{#rho#gamma}')
+    Plots.getSignalPDF(sigFileName, 'workspace_STAT_Rho_GFcat_bdt0_2018', 'crystal_ball_Rho_GFcat_bdt0_ggH')
+    Plots.getBackgroundPDF(bkgFileName, 'workspace_STAT_Rho_GFcat_bdt0_2018', 'bernstein_GFcat_bdt0_bkg')
+    Plots.getData(bkgFileName, 'workspace_STAT_Rho_GFcat_bdt0_2018', 'observed_data')
+    Plots.setSignalNevents(25.)
+    Plots.addLegendEntries(dataEntry='Data',
+                           bkgFitEntry='Background Only Model',
+                           bkgSigma1ErrorEntry='Background #pm 1#sigma',
+                           bkgSigma2ErrorEntry='Background #pm 2#sigma',
+                           sigEntry='H#rightarrow#rho#gamma BR=...')
+    Plots.legend_xl = .55
+    Plots.legend_xr = .95
+    Plots.legend_yb = .6
+    Plots.legend_yt = .9
+    Plots.makePlot('test2.pdf',
+                   Nbins=70,
+                   rangeLow=100.,
+                   rangeHigh=170.,
+                   residuals=True,
+                   residMin=-120,
+                   residMax=120)
