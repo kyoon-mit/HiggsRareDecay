@@ -51,10 +51,11 @@ class pubplots:
         self.Nevents = 0
 
         # Attributes for beautifying the plotting area
-        self.frameLabelSize = 0.03
-        self.frameAxisTitleOffset = 1.8
-        self.frameFont = 10
-        self.canvasHeight = 600
+        self.frameLabelSize = 0.04
+        self.frameAxisTitleOffset = 1.6
+        self.frameFont = 12
+        self.canvasPad1Height = 600
+        self.canvasPad2Height = 150
         self.canvasWidth = 800
         self.canvasTopMargin = .08
         self.canvasBottomMargin = .12
@@ -82,11 +83,11 @@ class pubplots:
         self.bkgSigma1ErrorEntry = ''
         self.bkgSigma2ErrorEntry = ''
         self.sigEntry = ''
-        self.legend_xl = .25
-        self.legend_xr = .6
-        self.legend_yb = .4
+        self.legend_xl = .15
+        self.legend_xr = .55
+        self.legend_yb = .3
         self.legend_yt = .6
-        self.legendTextSize = .02
+        self.legendTextSize = .03
         
         # Attributes for CMS-style texts
         self.iPeriod = iPeriod
@@ -187,11 +188,10 @@ class pubplots:
             residuals (bool, optional): Whether to make plot of residuals.
                 Defaults to False.
         """
+        tdrstyle.setTDRStyle()
         # Create canvas
-        c_width = self.canvasWidth
-        c_height = self.canvasHeight
-        if residuals: c_height *= 1.25
-        c = TCanvas('c', 'c', c_width, c_height)
+        c = TCanvas('c', 'c', self.canvasWidth, self.canvasPad1Height)
+        if residuals: c = TCanvas('c', 'c', self.canvasWidth, self.canvasPad1Height + self.canvasPad2Height)
         c.SetFillColor(0)
         c.SetBorderMode(0)
         c.SetFrameFillStyle(0)
@@ -207,11 +207,11 @@ class pubplots:
         plotFrame = self.keyVar.frame()
         plotFrame.SetXTitle('{} [{}]'.format(self.keyVar.GetTitle(), self.keyVar.getUnit()))
         plotFrame.SetYTitle('Events/{} {}'.format(int((rangeHigh - rangeLow)/Nbins), self.keyVar.getUnit()))
-        plotFrame.SetLabelSize(self.frameLabelSize, 'XY')
-        plotFrame.GetXaxis().SetTitleSize(self.frameLabelSize)
-        plotFrame.GetXaxis().SetTitleOffset(self.frameAxisTitleOffset-0.5)
-        plotFrame.GetYaxis().SetTitleSize(self.frameLabelSize)
-        plotFrame.GetYaxis().SetTitleOffset(self.frameAxisTitleOffset)
+        # plotFrame.SetLabelSize(self.frameLabelSize, 'XY')
+        # plotFrame.GetXaxis().SetTitleSize(self.frameLabelSize)
+        # plotFrame.GetXaxis().SetTitleOffset(self.frameAxisTitleOffset-0.5)
+        # plotFrame.GetYaxis().SetTitleSize(self.frameLabelSize)
+        # plotFrame.GetYaxis().SetTitleOffset(self.frameAxisTitleOffset)
 
         # Create a combined sig + bkg model
         Nsig = RooRealVar('Nsig', 'Nsig', self.Nevents, 0.0, 5000.0)
@@ -228,7 +228,6 @@ class pubplots:
                                              RooFit.Strategy(1),
                                              RooFit.PrintLevel(-1))
             fit_status = bkgFitResult.status()
-            print (fit_status)
             if tries >= max_tries:
                 break
             elif (fit_status != 0):
@@ -241,15 +240,6 @@ class pubplots:
                          RooFit.MarkerSize(self.dataMarkerSize),
                          RooFit.MarkerStyle(self.dataMarkerStyle),
                          RooFit.XErrorSize(self.dataXErrorBarSize))
-
-        # # Plot bkg only
-        # ### Plot bkg line
-        # self.bkgPDF.plotOn(plotFrame,
-        #                    RooFit.LineColor(self.bkgFitLineColor),
-        #                    RooFit.LineStyle(self.bkgFitLineStyle),
-        #                    RooFit.LineWidth(self.bkgFitLineWidth),
-        #                    RooFit.DrawOption('L'),
-        #                    RooFit.MoveToBack())
 
         # Plot sig + bkg model
         combPDF.plotOn(plotFrame,
@@ -290,7 +280,81 @@ class pubplots:
                            RooFit.Name('bkgPlusMinus2Sigma'),
                            RooFit.MoveToBack())
 
+        # (Optional) Make plots for residuals
+        if residuals:
+            residFrame = self.keyVar.frame()
+            residFrame.SetTitle('')
+            residFrame.SetYTitle('Data - Bkg')
+            residFrame.SetXTitle('{} [{}]'.format(self.keyVar.GetTitle(), self.keyVar.getUnit()))
 
+            residFrame.addPlotable(plotFrame.residHist('h_data', 'bkg', True), 'P')
+
+            # Plot signal - bkg
+            self.sigPDF.plotOn(residFrame,
+                           RooFit.LineColor(self.sigFitLineColor),
+                           RooFit.LineStyle(self.sigFitLineStyle),
+                           RooFit.LineWidth(self.sigFitLineWidth),
+                           RooFit.DrawOption('L'),
+                           RooFit.Name('residSigPDF'),
+                           RooFit.MoveToBack())
+
+
+            # Plot bkg - bkg (i.e. 0)
+            const_zero = RooRealVar('c1', 'c1', 0, -1.0, 1.0)
+            const_zero.setConstant()
+            const_zero.plotOn(residFrame,
+                        RooFit.LineColor(self.bkgFitLineColor),
+                        RooFit.LineStyle(self.bkgFitLineStyle),
+                        RooFit.LineWidth(self.bkgFitLineWidth),
+                        RooFit.DrawOption('L'),
+                        RooFit.Name('residBkgPDF'),
+                        RooFit.MoveToBack())
+            
+            # Plot bkg uncertainty - bkg
+            self.bkgPDF.plotOn(residFrame,
+                           RooFit.FillColor(self.bkg1SigmaErrorFillColor),
+                           RooFit.VisualizeError(bkgFitResult, 1),
+                           RooFit.VisualizeError(bkgFitResult, -1),
+                           RooFit.DrawOption('F'),
+                           RooFit.Name('bkgPlusMinus1Sigma'),
+                           RooFit.MoveToBack())
+            
+            bkgFitResult.Print()
+            print('-------------------------------\n\n\n\n')
+
+            # combPDF.plotOn(residFrame,
+            #                RooFit.FillColor(self.bkgFitFillColor),
+            #                RooFit.FillStyle(self.bkgFitFillStyle),
+            #                RooFit.LineColor(self.bkgFitLineColor),
+            #                RooFit.LineStyle(self.bkgFitLineStyle),
+            #                RooFit.Components('bkgPDF'),
+            #                RooFit.DrawOption('L'),
+            #                RooFit.Name('bkg'),
+            #                RooFit.MoveToBack())
+
+            # self.bkgPDF.plotOn(residFrame,
+            #                    RooFit.FillColor(self.bkg1SigmaErrorFillColor),
+            #                    RooFit.VisualizeError(bkgFitResult, 1),
+            #                    RooFit.VisualizeError(bkgFitResult, -1),
+            #                    RooFit.DrawOption('F'),
+            #                    RooFit.Name('bkgPlusMinus1Sigma'),
+            #                    RooFit.MoveToBack())
+
+            # self.bkgPDF.plotOn(residFrame,
+            #                    RooFit.FillColor(self.bkg2SigmaErrorFillColor),
+            #                    RooFit.VisualizeError(bkgFitResult, 2),
+            #                    RooFit.VisualizeError(bkgFitResult, -2),
+            #                    RooFit.DrawOption('F'),
+            #                    RooFit.Name('bkgPlusMinus2Sigma'),
+            #                    RooFit.MoveToBack())
+
+            # self.bkgPDF.plotOn(residFrame,
+            #                    RooFit.LineColor(self.bkgFitLineColor),
+            #                    RooFit.LineStyle(self.bkgFitLineStyle),
+            #                    RooFit.LineWidth(self.bkgFitLineWidth),
+            #                    RooFit.Normalization(1),
+            #                    RooFit.DrawOption('L'),
+            #                    RooFit.MoveToBack())
 
         # Make Legend
         legend = TLegend(self.legend_xl, self.legend_yb, self.legend_xr, self.legend_yt)
@@ -300,16 +364,18 @@ class pubplots:
         legend.AddEntry(plotFrame.findObject('bkg'), self.bkgFitEntry, 'l')
         legend.AddEntry(plotFrame.findObject('comb'), self.sigEntry, 'l')
         legend.SetTextAlign(12)
-        legend.SetTextSize(self.legendTextSize)
+        # legend.SetTextSize(self.legendTextSize)
 
         # Add residuals
         if residuals:
-            residFrame = self.keyVar.frame()
-            residFrame.addPlotable(plotFrame.residHist('h_data', 'bkg', True), 'P')
             ####### TODO: ADD uncertainty of the bkgPDF to the residFrame
-            residFrame.SetTitle('')
-            residFrame.SetYTitle('data/background fit')
+            # residFrame.SetLabelSize(self.frameLabelSize*4, 'XY')
+            # residFrame.GetXaxis().SetTitleSize(self.frameLabelSize)
+            # residFrame.GetXaxis().SetTitleOffset(self.frameAxisTitleOffset-0.5)
+            # residFrame.GetYaxis().SetTitleSize(self.frameLabelSize)
+            # residFrame.GetYaxis().SetTitleOffset(self.frameAxisTitleOffset)
             plotFrame.SetXTitle('')
+            plotFrame.SetLabelSize(0, 'X')
 
         # Draw
         if not residuals:
@@ -317,14 +383,20 @@ class pubplots:
             legend.Draw()
             CMS_lumi.CMS_lumi(c, self.iPeriod, self.iPos)  # Draw lumi and sqrt(s) info
         else:
-            pad1 = TPad('p1', 'p1', 0, .2, 1, 1)
-            pad2 = TPad('p2', 'p2', 0, 0, 1, .2)
+            pad_height_ratio = 1 - float(self.canvasPad1Height) / (self.canvasPad1Height + self.canvasPad2Height) + tdrStyle.GetPadBottomMargin()
+            print(pad_height_ratio)
+            pad1 = TPad('p1', 'p1', 0, pad_height_ratio, 1, 1)
+            pad2 = TPad('p2', 'p2', 0, 0, 1, pad_height_ratio)
+            pad1.SetBottomMargin(0.01) #
+            pad2.SetTopMargin(0) #
+            # pad2.SetBottomMargin(0.3)
             pad1.cd()
             plotFrame.Draw()
             legend.Draw()
             CMS_lumi.CMS_lumi(c, self.iPeriod, self.iPos)  # Draw lumi and sqrt(s) info
             pad2.cd()
             residFrame.Draw()
+            # TODO: Draw fit.
             c.cd()
             pad1.Draw()
             pad2.Draw()
@@ -354,4 +426,4 @@ if __name__=="__main__":
                    Nbins=70,
                    rangeLow=100.,
                    rangeHigh=170.,
-                   residuals=False)
+                   residuals=True)
