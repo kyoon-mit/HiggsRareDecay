@@ -1,8 +1,8 @@
 from pubplots import *
 
 group = 'MIT' # 'TO'
-cat = 'VBF' # 'VBF'
-meson = 'Phi'
+cat = 'GF' # 'VBF'
+meson = 'Rho'
 
 if group=='MIT':
     workspaceDir = '/work/submit/mariadlf/cards_march20/WS_MARCH20/'
@@ -13,7 +13,7 @@ if group=='MIT':
         iPos = 11
         varName = 'mh'
         varTitle = 'm_{#rho#gamma}'
-        blinding = True
+        blinding = False
         blindLow = 115.
         blindHigh = 135.
         workspaceName = 'w'
@@ -22,7 +22,7 @@ if group=='MIT':
         dataName = 'datahist_{}Cat_{}cat'.format(meson, cat)
         signalDataName = 'datahist_{}cat_ggH'.format(cat)
         BR = 9.13e-4
-        sigEntry='#mathcal{B}(H#rightarrow#rho#gamma) = 9.13#times10^{-4}'
+        sigEntry='B(H#rightarrow#rho#gamma) = 9.13#times10^{-4}'
         saveName = 'MIT_{}_{}_WS_MARCH20.png'.format(cat, meson)
         plotMax = 5000
         residMin = -250
@@ -73,7 +73,7 @@ if group=='MIT':
         dataName = 'datahist_{}Cat_{}cat'.format(meson, cat)
         signalDataName = 'datahist_{}cat_VBFH'.format(cat)
         BR = 1.6e-3
-        sigEntry='B(H#rightarrow#phi#gamma) = 1.6#times10^{-3}'
+        sigEntry='B(H#rightarrow#rho#gamma) = 1.6#times10^{-3}'
         saveName = 'MIT_{}_{}_WSmva_MARCH9.png'.format(cat, meson)
         plotMax = 300
         residMin = -25
@@ -177,4 +177,4 @@ Plots.legend_xl = legend_xl
 Plots.legend_xr = legend_xr
 Plots.legend_yb = legend_yb
 Plots.legend_yt = legend_yt
-Plots.makePlot(saveName, 70, 100., 170., 0, plotMax, True, residMin, residMax)
+Plots.makePlot(saveName, 70, 100., 170., 0, plotMax, False, residMin, residMax)

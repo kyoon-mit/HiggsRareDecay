@@ -27,12 +27,14 @@ class pubplots:
         # Attributes for building/storing the RooFit objects
         self.keyVar = None
         self.data = None
+        self.blindData = None
         self.sigPDF = None
         self.bkgPDF = None
         self.combPDF = None
         self.Nsig = None
         self.Nbkg = None
         self.Nevents = 0
+        self.blinding = True
 
         # Attributes for beautifying the plotting area
         self.frameLabelSize = 0.04
@@ -48,12 +50,12 @@ class pubplots:
         self.dataMarkerStyle = kFullCircle
         self.dataMarkerSize = .5
         self.dataXErrorBarSize = 0 # TODO
-        self.bkg1SigmaErrorFillColor = kGreen + 1 # Brazilian
+        self.bkg1SigmaErrorFillColor = kGray #kGreen + 1 # Brazilian
         self.bkg2SigmaErrorFillColor = kOrange # Brazilian
         self.bkgFitFillColor = kWhite
         self.bkgFitFillStyle = 0 # Transparent
-        self.bkgFitLineColor = kRed
-        self.bkgFitLineStyle = kDotted
+        self.bkgFitLineColor = kBlue
+        self.bkgFitLineStyle = kDashed
         self.bkgFitLineWidth = 2
         self.sigFitFillColor = kWhite
         self.sigFitFillStyle = 0 # Transparent
@@ -85,7 +87,7 @@ class pubplots:
         """
         self.dir = directory
 
-    def getKeyVar(self, fileName, workspaceName, varName, varTitle, rangeLow, rangeHigh, unit='GeV'):
+    def getKeyVar(self, fileName, workspaceName, varName, varTitle, rangeLow, rangeHigh, blinding='True', blindLow=115, blindHigh=135, unit='GeV'):
         """
         """
         varFile = TFile.Open(path.join(self.dir, fileName), 'READ')
@@ -93,7 +95,13 @@ class pubplots:
         self.keyVar = w.var(varName)
         self.keyVar.SetTitle(varTitle)
         self.keyVar.setUnit(unit)
-        self.keyVar.setRange(float(rangeLow), float(rangeHigh))
+        self.keyVar.setRange('full', float(rangeLow), float(rangeHigh))
+        self.blinding = blinding
+        if self.blinding:
+            self.keyVar.setRange('left', float(rangeLow), float(blindLow))
+            self.keyVar.setBins(int(blindLow-rangeLow), 'left')
+            self.keyVar.setRange('right', float(blindHigh), float(rangeHigh))
+            self.keyVar.setBins(int(rangeHigh-blindHigh), 'right')
 
     def getSignalPDF(self, signalFileName, workspaceName, signalPDFName):
         """Method to get the signal PDF.
@@ -133,6 +141,8 @@ class pubplots:
         w = dataFile.Get(workspaceName)
         self.data = w.data(dataName)
         self.data.SetName('data')
+        if self.blinding:
+            self.blindData = self.data.reduce(RooFit.CutRange('left,right'))
     
     def setSignalNevents(self, Nevents):
         """Sets the number of signal events in order to properly scale the signal PDF.
@@ -144,6 +154,31 @@ class pubplots:
             Nevents (float): Number of signal events.
         """
         self.Nevents = Nevents
+
+    def setSignalBranchingRatio(self, signalFileName, workspaceName, signalDataName,
+                                branchingRatio, sigBR=1.):
+        """Sets the number of signal events by the branching ratio.
+
+        One would calculate the expected signal events under a certain hypothesis.
+        (e.g. m events for an upper limit of CL 95%).
+
+        Args:
+            signalFileName (str): Name of the ROOT file containing the signal PDF.
+            workspaceName (str): Name of the RooWorkspace inside the ROOT file.
+            signalDataName (str): Name of the signal data.
+            branchingRatio (float): Branching ratio of the signal.
+            sigBR (float): Default BR under which the signal data was created.
+        """
+        signalFile = TFile.Open(path.join(self.dir, signalFileName), 'READ')
+        w = signalFile.Get(workspaceName)
+        sigData = w.data(signalDataName)
+        data_sum = 0
+        try:
+            data_sum = sigData.sum(True)
+        except:
+            data_sum = sigData.sumEntries()
+        self.Nevents = data_sum * float(branchingRatio) / float(sigBR)
+        print ('Signal N events: {:.2f}'.format(self.Nevents))
 
     def addLegendEntries(self, dataEntry, bkgFitEntry, bkgSigma1ErrorEntry,
                          bkgSigma2ErrorEntry, sigEntry):
@@ -162,7 +197,8 @@ class pubplots:
         self.bkgSigma2ErrorEntry = bkgSigma2ErrorEntry
         self.sigEntry = sigEntry
 
-    def makePlot(self, saveName, Nbins, rangeLow, rangeHigh, residuals=False, residMin=-250, residMax=250):
+    def makePlot(self, saveName, Nbins, rangeLow, rangeHigh, plotMin=0, plotMax=5000,
+                 residuals=False, residMin=-250, residMax=250):
         """Create and save the final plot.
 
         Args:
@@ -170,6 +206,10 @@ class pubplots:
             Nbins (int): Number of bins.
             rangeLow (float): Lower range of the plotting region.
             rangeHigh (float): Upper range of the region.
+            plotMin (float): The lower limit for the y axis.
+                Defaults to 0.
+            plotMax (float): The lower limit for the y axis.
+                Defaults to 5000.
             residuals (bool, optional): Whether to make plot of residuals.
                 Defaults to False.
             residMin (float, optional): If residuals is True, then this sets
@@ -180,6 +220,7 @@ class pubplots:
                 Defaults to 250.
         """
         tdrstyle.setTDRStyle()
+
         # Create canvas
         c = TCanvas('c', 'c', self.canvasWidth, self.canvasPad1Height)
         if residuals: c = TCanvas('c', 'c', self.canvasWidth, self.canvasPad1Height + self.canvasPad2Height)
@@ -202,7 +243,7 @@ class pubplots:
         plotFrame = self.keyVar.frame()
         plotFrame.SetXTitle(xTitle)
         plotFrame.SetYTitle(yTitle)
-        # plotFrame.SetLabelSize(self.frameLabelSize, 'XY')
+        plotFrame.SetLabelSize(self.frameLabelSize, 'XY')
         # plotFrame.GetXaxis().SetTitleSize(self.frameLabelSize)
         # plotFrame.GetXaxis().SetTitleOffset(self.frameAxisTitleOffset-0.5)
         # plotFrame.GetYaxis().SetTitleSize(self.frameLabelSize)
@@ -216,17 +257,27 @@ class pubplots:
             data_sum = self.data.sumEntries()
         Nsig = RooRealVar('Nsig', 'Nsig', self.Nevents, 0.0, 5000.0)
         Nbkg = RooRealVar('Nbkg', 'Nbkg', data_sum, 0.0, 10000.0)
+        Nsig.setConstant()
+        Nbkg.setConstant()
         combPDF = RooRealSumPdf('comb', 'comb', RooArgList(self.sigPDF, self.bkgPDF), RooArgList(Nsig, Nbkg), True)
 
-        # Get fit result from bkg pdf (better way to do this other than fitTo?)
+        # Get fit result from bkg pdf
+        # TODO: better way to do this other than fitTo?
         fit_status = -1
         max_tries = 10
         tries = 1
         while fit_status != 0:
-            bkgFitResult = self.bkgPDF.fitTo(self.data,
-                                             RooFit.Save(True),
-                                             RooFit.Strategy(1),
-                                             RooFit.PrintLevel(-1))
+            if not self.blinding:
+                bkgFitResult = self.bkgPDF.fitTo(self.data,
+                                                 RooFit.Save(True),
+                                                 RooFit.Strategy(1),
+                                                 RooFit.PrintLevel(-1))
+            else:
+                bkgFitResult = self.bkgPDF.fitTo(self.blindData,
+                                                 RooFit.Range('full'),
+                                                 RooFit.Save(True),
+                                                 RooFit.Strategy(1),
+                                                 RooFit.PrintLevel(-1))
             fit_status = bkgFitResult.status()
             if tries >= max_tries:
                 break
@@ -235,22 +286,29 @@ class pubplots:
                 tries += 1
 
         # Plot the data
-        self.data.plotOn(plotFrame,
-                         RooFit.Binning(Nbins),
-                         RooFit.MarkerSize(self.dataMarkerSize),
-                         RooFit.MarkerStyle(self.dataMarkerStyle),
-                         RooFit.XErrorSize(self.dataXErrorBarSize))
+        if not self.blinding:
+            self.data.plotOn(plotFrame,
+                             RooFit.Binning(Nbins),
+                             RooFit.MarkerSize(self.dataMarkerSize),
+                             RooFit.MarkerStyle(self.dataMarkerStyle),
+                             RooFit.XErrorSize(self.dataXErrorBarSize))
+        else:
+            self.blindData.plotOn(plotFrame,
+                                  RooFit.NormRange('left,right'),
+                                  RooFit.MarkerSize(self.dataMarkerSize),
+                                  RooFit.MarkerStyle(self.dataMarkerStyle),
+                                  RooFit.XErrorSize(self.dataXErrorBarSize),
+                                  RooFit.Name('h_blind_data'))
 
         # Plot sig + bkg model
         combPDF.plotOn(plotFrame,
-                    #    RooFit.FillColor(self.sigFitFillColor),
-                    #    RooFit.FillStyle(self.sigFitFillStyle),
                        RooFit.LineColor(self.sigFitLineColor),
                        RooFit.LineStyle(self.sigFitLineStyle),
                        RooFit.LineWidth(self.sigFitLineWidth),
                        RooFit.DrawOption('L'),
                        RooFit.Name('comb'),
                        RooFit.MoveToBack())
+
 
         ### Plot bkg only model
         combPDF.plotOn(plotFrame,
@@ -273,17 +331,18 @@ class pubplots:
                            RooFit.Name('bkgPlusMinus1Sigma'),
                            RooFit.MoveToBack())
 
-        self.bkgPDF.plotOn(plotFrame,
-                           RooFit.FillColor(self.bkg2SigmaErrorFillColor),
-                           RooFit.LineWidth(0),
-                           RooFit.VisualizeError(bkgFitResult, 2),
-                           RooFit.VisualizeError(bkgFitResult, -2),
-                           RooFit.DrawOption('F'),
-                           RooFit.Precision(1e-4),
-                           RooFit.Name('bkgPlusMinus2Sigma'),
-                           RooFit.MoveToBack())
+        # self.bkgPDF.plotOn(plotFrame,
+        #                    RooFit.FillColor(self.bkg2SigmaErrorFillColor),
+        #                    RooFit.LineWidth(0),
+        #                    RooFit.VisualizeError(bkgFitResult, 2),
+        #                    RooFit.VisualizeError(bkgFitResult, -2),
+        #                    RooFit.DrawOption('F'),
+        #                    RooFit.Precision(1e-4),
+        #                    RooFit.Name('bkgPlusMinus2Sigma'),
+        #                    RooFit.MoveToBack())
 
-        plotFrame.SetMinimum(0)
+        plotFrame.SetMinimum(plotMin)
+        plotFrame.SetMaximum(plotMax)
 
         # (Optional) Make plots for residuals
         if residuals:
@@ -325,37 +384,36 @@ class pubplots:
             # Make plots of bkg uncertainty - bkg
             bkgCentral = plotFrame.findObject('bkg')
             bkg1Sigma = plotFrame.findObject('bkgPlusMinus1Sigma')
-            bkg2Sigma = plotFrame.findObject('bkgPlusMinus2Sigma')
+            # bkg2Sigma = plotFrame.findObject('bkgPlusMinus2Sigma')
             bkg1SigmaX = bkg1Sigma.GetX()
             bkg1SigmaY = bkg1Sigma.GetY()
-            bkg2SigmaX = bkg2Sigma.GetX()
-            bkg2SigmaY = bkg2Sigma.GetY()
+            # bkg2SigmaX = bkg2Sigma.GetX()
+            # bkg2SigmaY = bkg2Sigma.GetY()
             bkgNPoints = bkg1Sigma.GetN()
             bkg1SigmaTGraph = TGraph(bkgNPoints)
-            bkg2SigmaTGraph = TGraph(bkgNPoints)
+            # bkg2SigmaTGraph = TGraph(bkgNPoints)
             params = RooArgList(self.bkgPDF.getParameters(RooArgSet(self.keyVar)))
             for i in range(0, bkgNPoints):
                 bkg1SigmaTGraph.SetPoint(i, bkg1SigmaX[i], bkg1SigmaY[i] - bkgCentral.Eval(bkg1SigmaX[i]))
-                bkg2SigmaTGraph.SetPoint(i, bkg2SigmaX[i], bkg2SigmaY[i] - bkgCentral.Eval(bkg2SigmaX[i]))
+                # bkg2SigmaTGraph.SetPoint(i, bkg2SigmaX[i], bkg2SigmaY[i] - bkgCentral.Eval(bkg2SigmaX[i]))
             bkg1SigmaTGraph.SetFillColor(self.bkg1SigmaErrorFillColor)
             bkg1SigmaTGraph.GetXaxis().SetTitle(xTitle)
             bkg1SigmaTGraph.GetYaxis().SetTitle(yTitle)
             bkg1SigmaTGraph.GetXaxis().SetRangeUser(rangeLow, rangeHigh)
             bkg1SigmaTGraph.SetMinimum(residMin)
             bkg1SigmaTGraph.SetMaximum(residMax)
-            bkg2SigmaTGraph.SetFillColor(self.bkg2SigmaErrorFillColor)
-            bkg2SigmaTGraph.GetXaxis().SetTitle(xTitle)
-            bkg2SigmaTGraph.GetYaxis().SetTitle(yTitle)
-            bkg2SigmaTGraph.SetMinimum(residMin)
-            bkg2SigmaTGraph.SetMaximum(residMax)
-            bkg2SigmaTGraph.GetXaxis().SetRangeUser(rangeLow, rangeHigh)
-
+            # bkg2SigmaTGraph.SetFillColor(self.bkg2SigmaErrorFillColor)
+            # bkg2SigmaTGraph.GetXaxis().SetTitle(xTitle)
+            # bkg2SigmaTGraph.GetYaxis().SetTitle(yTitle)
+            # bkg2SigmaTGraph.SetMinimum(residMin)
+            # bkg2SigmaTGraph.SetMaximum(residMax)
+            # bkg2SigmaTGraph.GetXaxis().SetRangeUser(rangeLow, rangeHigh)
 
         # Make Legend
         legend = TLegend(self.legend_xl, self.legend_yb, self.legend_xr, self.legend_yt)
         legend.AddEntry(plotFrame.findObject('h_data'), self.dataEntry, 'pe')
         legend.AddEntry(plotFrame.findObject('bkgPlusMinus1Sigma'), self.bkgSigma1ErrorEntry, 'f')
-        legend.AddEntry(plotFrame.findObject('bkgPlusMinus2Sigma'), self.bkgSigma2ErrorEntry, 'f')
+        # legend.AddEntry(plotFrame.findObject('bkgPlusMinus2Sigma'), self.bkgSigma2ErrorEntry, 'f')
         legend.AddEntry(plotFrame.findObject('bkg'), self.bkgFitEntry, 'l')
         legend.AddEntry(plotFrame.findObject('comb'), self.sigEntry, 'l')
         legend.SetTextAlign(12)
@@ -369,7 +427,6 @@ class pubplots:
             CMS_lumi.CMS_lumi(c, self.iPeriod, self.iPos)  # Draw lumi and sqrt(s) info
         else:
             pad_height_ratio = 1 - float(self.canvasPad1Height) / (self.canvasPad1Height + self.canvasPad2Height) + tdrStyle.GetPadBottomMargin()
-            print(pad_height_ratio)
             pad1 = TPad('p1', 'p1', 0, pad_height_ratio, 1, 1)
             pad2 = TPad('p2', 'p2', 0, 0, 1, pad_height_ratio)
             pad1.SetBottomMargin(0.03) #
@@ -379,8 +436,8 @@ class pubplots:
             legend.Draw()
             CMS_lumi.CMS_lumi(pad1, self.iPeriod, self.iPos)  # Draw lumi and sqrt(s) info
             pad2.cd()
-            bkg2SigmaTGraph.Draw('A CF')
-            bkg1SigmaTGraph.Draw('SAME CF')
+            # bkg2SigmaTGraph.Draw('A CF')
+            bkg1SigmaTGraph.Draw('A CF')
             residFrame.Draw('SAME')            
             c.cd()
             pad1.Draw()
@@ -433,9 +490,9 @@ if __name__=="__main__":
     Plots.getKeyVar(sigFileName,
                     workspaceName='w',
                     varName='mh',
+                    varTitle='m_{#rho#gamma}',
                     rangeLow=100.,
-                    rangeHigh=170.,
-                    varTitle='m_{#rho#gamma}')
+                    rangeHigh=170.)
     Plots.getSignalPDF(sigFileName, 'w', 'crystal_ball_RhoCat_GFcat_ggH')
     Plots.getBackgroundPDF(bkgFileName, 'w', 'bern3_RhoCat_GFcat')
     Plots.getData(bkgFileName, 'w', 'observed_data')
@@ -454,6 +511,7 @@ if __name__=="__main__":
     """
 
     ### TEST 3: Torino workspace ###
+    """
     sigFileName = 'workspace_STAT_Rho_GFcat_bdt0_2018.root'
     bkgFileName = sigFileName # identical file
 
@@ -485,3 +543,4 @@ if __name__=="__main__":
                    residuals=True,
                    residMin=-120,
                    residMax=120)
+    """
