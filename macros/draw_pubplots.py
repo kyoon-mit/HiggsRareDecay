@@ -1,109 +1,107 @@
 from pubplots import *
 
-group = 'MIT' # 'TO'
+group = 'TO' # 'TO'
 cat = 'GF' # 'VBF'
 meson = 'Rho'
 
 if group=='MIT':
-    workspaceDir = '/work/submit/mariadlf/cards_march20/WS_MARCH20/'
+    workspaceDir = '/work/submit/kyoon/CMSSW_10_6_27/src/hig-23-005/datacards/MIT_all/workspaces'
     if cat=='GF' and meson=='Rho':
-        sigFileName = 'Signal_{}cat__{}Cat_2018_workspace.root'.format(cat, meson)
-        bkgFileName = 'Bkg_{}cat__{}Cat_2018_workspace.root'.format(cat, meson)
+        sigFileName = 'workspace_{}_{}cat_2018.root'.format(meson, cat)
+        bkgFileName = 'workspace_{}_{}cat_2018.root'.format(meson, cat)
         iPeriod = 4
         iPos = 11
         varName = 'mh'
         varTitle = 'm_{#rho#gamma}'
         blinding = False
-        blindLow = 115.
-        blindHigh = 135.
         workspaceName = 'w'
         signalPDFName = 'crystal_ball_{}Cat_{}cat_ggH'.format(meson, cat)
+        signalNormName = 'crystal_ball_{}Cat_{}cat_ggH_norm'.format(meson, cat)
         backgroundPDFName = 'chebychev3_{}Cat_{}cat'.format(meson, cat)
-        dataName = 'datahist_{}Cat_{}cat'.format(meson, cat)
-        signalDataName = 'datahist_{}cat_ggH'.format(cat)
+        backgroundNormName = 'multipdf_{}Cat_{}cat_bkg_norm'.format(meson, cat)
+        dataName = 'observed_data'
+        # signalDataName = 'N/A'
         BR = 9.13e-4
         sigEntry='B(H#rightarrow#rho#gamma) = 9.13#times10^{-4}'
-        saveName = 'MIT_{}_{}_WS_MARCH20.png'.format(cat, meson)
-        plotMax = 5000
-        residMin = -250
-        residMax = 250
-        legend_xl = .2
-        legend_xr = .6
-        legend_yb = .1
-        legend_yt = .4
+        saveName = 'MIT_{}_{}.png'.format(cat, meson)
+        plotMax = 1500
+        residMin = -100
+        residMax = 100
+        legend_xl = .55
+        legend_xr = .95
+        legend_yb = .6
+        legend_yt = .9
     elif cat=='GF' and meson=='Phi':
-        sigFileName = 'Signal_{}cat__{}Cat_2018_workspace.root'.format(cat, meson)
-        bkgFileName = 'Bkg_{}cat__{}Cat_2018_workspace.root'.format(cat, meson)
+        sigFileName = 'workspace_{}_{}cat_2018.root'.format(meson, cat)
+        bkgFileName = 'workspace_{}_{}cat_2018.root'.format(meson, cat)
         iPeriod = 4
         iPos = 11
         varName = 'mh'
         varTitle = 'm_{#phi#gamma}'
         blinding = False
-        blindLow = 115.
-        blindHigh = 135.
         workspaceName = 'w'
         signalPDFName = 'crystal_ball_{}Cat_{}cat_ggH'.format(meson, cat)
+        signalNormName = 'crystal_ball_{}Cat_{}cat_ggH_norm'.format(meson, cat)
         backgroundPDFName = 'chebychev3_{}Cat_{}cat'.format(meson, cat)
-        dataName = 'datahist_{}Cat_{}cat'.format(meson, cat)
-        signalDataName = 'datahist_{}cat_ggH'.format(cat)
+        backgroundNormName = 'multipdf_{}Cat_{}cat_bkg_norm'.format(meson, cat)
+        dataName = 'observed_data'
+        # signalDataName = 'N/A'
         BR = 4.74e-4
-        sigEntry='#mathcal{B}(H#rightarrow#phi#gamma) = 4.74#times10^{-4}'
-        saveName = 'MIT_{}_{}_WS_MARCH20.png'.format(cat, meson)
-        plotMax = 5000
-        residMin = -250
-        residMax = 250
-        legend_xl = .2
-        legend_xr = .6
-        legend_yb = .1
-        legend_yt = .4
+        sigEntry='B(H#rightarrow#phi#gamma) = 4.74#times10^{-4}'
+        saveName = 'MIT_{}_{}.png'.format(cat, meson)
+        plotMax = 200
+        residMin = -40
+        residMax = 40
+        legend_xl = .55
+        legend_xr = .95
+        legend_yb = .6
+        legend_yt = .9
     elif cat=='VBF' and meson=='Rho':
-        workspaceDir = '/work/submit/mariadlf/cards_march9/WS_MARCH9/'
-        sigFileName = 'Signal_{}cat__{}Cat_Run2_workspace.root'.format(cat, meson)
-        bkgFileName = 'Bkg_{}cat__{}Cat_Run2_workspace.root'.format(cat, meson)
+        sigFileName = 'workspace_{}_{}cat_Run2.root'.format(meson, cat)
+        bkgFileName = 'workspace_{}_{}cat_Run2.root'.format(meson, cat)
         iPeriod = 4
         iPos = 11
         varName = 'mh'
         varTitle = 'm_{#rho#gamma}'
         blinding = False
-        blindLow = 115.
-        blindHigh = 135.
         workspaceName = 'w'
         signalPDFName = 'crystal_ball_{}Cat_{}cat_VBFH'.format(meson, cat)
-        backgroundPDFName = 'chebychev2_{}Cat_{}cat'.format(meson, cat)
-        dataName = 'datahist_{}Cat_{}cat'.format(meson, cat)
-        signalDataName = 'datahist_{}cat_VBFH'.format(cat)
+        signalNormName = 'crystal_ball_{}Cat_{}cat_VBFH_norm'.format(meson, cat)
+        backgroundPDFName = 'chebychev1_{}Cat_{}cat'.format(meson, cat)
+        backgroundNormName = 'multipdf_{}Cat_{}cat_bkg_norm'.format(meson, cat)
+        dataName = 'observed_data'
+        # signalDataName = 'N/A'
         BR = 1.6e-3
         sigEntry='B(H#rightarrow#rho#gamma) = 1.6#times10^{-3}'
-        saveName = 'MIT_{}_{}_WSmva_MARCH9.png'.format(cat, meson)
-        plotMax = 300
-        residMin = -25
-        residMax = 25
+        saveName = 'MIT_{}_{}.png'.format(cat, meson)
+        plotMax = 20
+        residMin = -10
+        residMax = 10
         legend_xl = .55
         legend_xr = .95
         legend_yb = .6
         legend_yt = .9
     elif cat=='VBF' and meson=='Phi':
-        workspaceDir = '/work/submit/mariadlf/cards_march9/WS_MARCH9/'
-        sigFileName = 'Signal_{}cat__{}Cat_Run2_workspace.root'.format(cat, meson)
-        bkgFileName = 'Bkg_{}cat__{}Cat_Run2_workspace.root'.format(cat, meson)
+        sigFileName = 'workspace_{}_{}cat_Run2.root'.format(meson, cat)
+        bkgFileName = 'workspace_{}_{}cat_Run2.root'.format(meson, cat)
         iPeriod = 4
         iPos = 11
         varName = 'mh'
-        varTitle = 'm_{#phi#gamma}'
+        varTitle = 'm_{#rho#gamma}'
         blinding = False
-        blindLow = 115.
-        blindHigh = 135.
         workspaceName = 'w'
         signalPDFName = 'crystal_ball_{}Cat_{}cat_VBFH'.format(meson, cat)
-        backgroundPDFName = 'chebychev2_{}Cat_{}cat'.format(meson, cat)
-        dataName = 'datahist_{}Cat_{}cat'.format(meson, cat)
-        signalDataName = 'datahist_{}cat_VBFH'.format(cat)
+        signalNormName = 'crystal_ball_{}Cat_{}cat_VBFH_norm'.format(meson, cat)
+        backgroundPDFName = 'chebychev1_{}Cat_{}cat'.format(meson, cat)
+        backgroundNormName = 'multipdf_{}Cat_{}cat_bkg_norm'.format(meson, cat)
+        dataName = 'observed_data'
+        # signalDataName = 'N/A'
         BR = 2.0e-3
-        sigEntry='B(H#rightarrow#phi#gamma) = 2.0#times10^{-3}'
-        saveName = 'MIT_{}_{}_WSmva_MARCH9.png'.format(cat, meson)
-        plotMax = 30
-        residMin = -15
-        residMax = 15
+        sigEntry='B(H#rightarrow#rho#gamma) = 1.6#times10^{-3}'
+        saveName = 'MIT_{}_{}.png'.format(cat, meson)
+        plotMax = 20
+        residMin = -10
+        residMax = 10
         legend_xl = .55
         legend_xr = .95
         legend_yb = .6
@@ -118,11 +116,11 @@ elif group=='TO':
         varName = 'mesonGammaMass'
         varTitle = 'm_{#rho#gamma}'
         blinding = False
-        blindLow = 120.
-        blindHigh = 130.
         workspaceName = 'workspace_STAT_{}_{}cat_bdt0_2018'.format(meson, cat)
         signalPDFName = 'crystal_ball_{}_{}cat_bdt0_ggH'.format(meson, cat)
+        signalNormName = 'crystal_ball_{}_{}cat_bdt0_ggH_norm'.format(meson, cat)
         backgroundPDFName = 'chebychev_{}cat_bdt0_bkg'.format(cat)
+        backgroundNormName = 'multipdf_{}_{}cat_bdt0_bkg_norm'.format(meson, cat)
         dataName = 'observed_data'
         signalDataName = 'dataset_ggH'.format(cat)
         BR = 6.98e-4
@@ -143,11 +141,11 @@ elif group=='TO':
         varName = 'mesonGammaMass'
         varTitle = 'm_{#phi#gamma}'
         blinding = False
-        blindLow = 120.
-        blindHigh = 130.
         workspaceName = 'workspace_STAT_{}_{}cat_bdt0_2018'.format(meson, cat)
         signalPDFName = 'crystal_ball_{}_{}cat_bdt0_ggH'.format(meson, cat)
+        signalNormName = 'crystal_ball_{}_{}cat_bdt0_ggH_norm'.format(meson, cat)
         backgroundPDFName = 'chebychev_{}cat_bdt0_bkg'.format(cat)
+        backgroundNormName = 'multipdf_{}_{}cat_bdt0_bkg_norm'.format(meson, cat)
         dataName = 'observed_data'
         signalDataName = 'dataset_ggH'.format(cat)
         BR = 3.76e-4
@@ -163,11 +161,12 @@ elif group=='TO':
 
 Plots = pubplots(iPeriod, iPos)
 Plots.setFindFileDir(workspaceDir)
-Plots.getKeyVar(sigFileName, workspaceName, varName, varTitle, 100., 170., blinding, blindLow, blindHigh)
-Plots.getSignalPDF(sigFileName, workspaceName, signalPDFName)
-Plots.getBackgroundPDF(bkgFileName, workspaceName, backgroundPDFName)
-Plots.getData(bkgFileName, workspaceName, dataName)
-Plots.setSignalBranchingRatio(sigFileName, workspaceName, signalDataName, BR)
+Plots.getKeyVar(sigFileName, workspaceName, varName, varTitle, 100., 170., blinding)
+Plots.getSignalPDF(sigFileName, workspaceName, signalPDFName, signalNormName)
+Plots.getBackgroundPDF(bkgFileName, workspaceName, backgroundPDFName, backgroundNormName)
+#Plots.getData(bkgFileName, workspaceName, dataName)
+Plots.generateData()
+Plots.setSignalBranchingRatio(BR)
 Plots.addLegendEntries(dataEntry='Data',
                        bkgFitEntry='Background Fit',
                        bkgSigma1ErrorEntry='Background #pm 1#sigma',
@@ -177,4 +176,4 @@ Plots.legend_xl = legend_xl
 Plots.legend_xr = legend_xr
 Plots.legend_yb = legend_yb
 Plots.legend_yt = legend_yt
-Plots.makePlot(saveName, 70, 100., 170., 0, plotMax, False, residMin, residMax)
+Plots.makePlot(saveName, 70, 100., 170., 0, plotMax, True, residMin, residMax)

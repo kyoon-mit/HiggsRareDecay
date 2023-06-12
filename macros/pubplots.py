@@ -31,25 +31,28 @@ class pubplots:
         self.sigPDF = None
         self.bkgPDF = None
         self.combPDF = None
+        self.sigNorm = None
+        self.bkgNorm = None
         self.Nsig = None
         self.Nbkg = None
         self.Nevents = 0
         self.blinding = True
 
         # Attributes for beautifying the plotting area
-        self.frameLabelSize = 0.04
-        self.frameAxisTitleOffset = 1.6
-        self.frameFont = 12
-        self.canvasPad1Height = 600
-        self.canvasPad2Height = 150
-        self.canvasWidth = 800
+        # self.frameLabelSize
+        # self.frameXaxisTitleOffset = tdrStyle.GetTitleXOffset()
+        # self.frameYaxisTitleOffset = tdrStyle.GetTitleXOffset()
+        # self.frameFont = 42
+        self.canvasPad1Height = 480
+        self.canvasPad2Height = 120
+        self.canvasWidth = 600
         self.canvasTopMargin = .08
         self.canvasBottomMargin = .12
         self.canvasLeftMargin = .12
         self.canvasRightMargin = .04
-        self.dataMarkerStyle = kFullCircle
-        self.dataMarkerSize = .5
-        self.dataXErrorBarSize = 0 # TODO
+        # self.dataMarkerStyle = kFullCircle
+        # self.dataMarkerSize = .5
+        self.dataXErrorBarSize = 0
         self.bkg1SigmaErrorFillColor = kGray #kGreen + 1 # Brazilian
         self.bkg2SigmaErrorFillColor = kOrange # Brazilian
         self.bkgFitFillColor = kWhite
@@ -103,31 +106,41 @@ class pubplots:
             self.keyVar.setRange('right', float(blindHigh), float(rangeHigh))
             self.keyVar.setBins(int(rangeHigh-blindHigh), 'right')
 
-    def getSignalPDF(self, signalFileName, workspaceName, signalPDFName):
+    def getSignalPDF(self, signalFileName, workspaceName,
+                     signalPDFName, signalNormName):
         """Method to get the signal PDF.
 
         Args:
             signalFileName (str): Name of the ROOT file containing the signal PDF.
             workspaceName (str): Name of the RooWorkspace inside the ROOT file.
             signalPDFName (str): Name of the signal PDF.
+            signalNormName (str): Name of the variable containing the
+                                  normalization of the signal PDF.
         """
         signalFile = TFile.Open(path.join(self.dir, signalFileName), 'READ')
         w = signalFile.Get(workspaceName)
         self.sigPDF = w.pdf(signalPDFName)
         self.sigPDF.SetName('sigPDF')
+        self.sigNorm = w.var(signalNormName)
+        self.sigNorm.SetName('sigNorm')
 
-    def getBackgroundPDF(self, backgroundFileName, workspaceName, backgroundPDFName):
+    def getBackgroundPDF(self, backgroundFileName, workspaceName,
+                         backgroundPDFName, backgroundNormName):
         """Method to get the background PDF.
 
         Args:
             backgroundFileName (str): Name of the ROOT file containing the background PDF.
             workspaceName (str): Name of the RooWorkspace inside the ROOT file.
             backgroundPDFName (str): Name of the background PDF.
+            backgroundNormName (str): Name of the variable containing the
+                                      normalization of the background PDF.
         """
         backgroundFile = TFile.Open(path.join(self.dir, backgroundFileName), 'READ')
         w = backgroundFile.Get(workspaceName)
         self.bkgPDF = w.pdf(backgroundPDFName)
         self.bkgPDF.SetName('bkgPDF')
+        self.bkgNorm = w.var(backgroundNormName)
+        self.bkgNorm.SetName('bkgNorm')
 
     def getData(self, dataFileName, workspaceName, dataName):
         """Method to get the data.
@@ -143,6 +156,18 @@ class pubplots:
         self.data.SetName('data')
         if self.blinding:
             self.blindData = self.data.reduce(RooFit.CutRange('left,right'))
+
+    def generateData(self):
+        """Method to generate MC data.
+
+        This method is used when showing "proof of concept" plots when the
+        real data is not ready. It generates a RooDataSet object from
+        an existing background PDF that is stored in the class attribute, bkgPDF.
+
+        
+        """
+        self.data = self.bkgPDF.generate(RooArgSet(self.keyVar), self.bkgNorm.getValV())
+        self.data.SetName('data')
     
     def setSignalNevents(self, Nevents):
         """Sets the number of signal events in order to properly scale the signal PDF.
@@ -155,7 +180,20 @@ class pubplots:
         """
         self.Nevents = Nevents
 
-    def setSignalBranchingRatio(self, signalFileName, workspaceName, signalDataName,
+    def setSignalBranchingRatio(self, branchingRatio, sigBR=1.):
+        """Sets the number of signal events by the branching ratio.
+
+        One would calculate the expected signal events under a certain hypothesis.
+        (e.g. m events for an upper limit of CL 95%).
+
+        Args:
+            branchingRatio (float): Branching ratio of the signal.
+            sigBR (float): Default BR under which the signal data was created.
+        """
+        self.Nevents = self.sigNorm.getValV() * float(branchingRatio) / float(sigBR)
+        print ('Signal N events: {:.2f}'.format(self.Nevents))
+
+    def setSignalBranchingRatioFromData(self, signalFileName, workspaceName, signalDataName,
                                 branchingRatio, sigBR=1.):
         """Sets the number of signal events by the branching ratio.
 
@@ -243,11 +281,6 @@ class pubplots:
         plotFrame = self.keyVar.frame()
         plotFrame.SetXTitle(xTitle)
         plotFrame.SetYTitle(yTitle)
-        plotFrame.SetLabelSize(self.frameLabelSize, 'XY')
-        # plotFrame.GetXaxis().SetTitleSize(self.frameLabelSize)
-        # plotFrame.GetXaxis().SetTitleOffset(self.frameAxisTitleOffset-0.5)
-        # plotFrame.GetYaxis().SetTitleSize(self.frameLabelSize)
-        # plotFrame.GetYaxis().SetTitleOffset(self.frameAxisTitleOffset)
 
         # Create a combined sig + bkg model
         data_sum = 0
@@ -256,7 +289,9 @@ class pubplots:
         except:
             data_sum = self.data.sumEntries()
         Nsig = RooRealVar('Nsig', 'Nsig', self.Nevents, 0.0, 5000.0)
-        Nbkg = RooRealVar('Nbkg', 'Nbkg', data_sum, 0.0, 10000.0)
+        # TODO: compare whether data_sum == self.bkgNorm.getValV()
+        # Nbkg = RooRealVar('Nbkg', 'Nbkg', data_sum, 0.0, 10000.0)
+        Nbkg = RooRealVar('Nbkg', 'Nbkg', self.bkgNorm.getValV(), 0.0, 10000.0)
         Nsig.setConstant()
         Nbkg.setConstant()
         combPDF = RooRealSumPdf('comb', 'comb', RooArgList(self.sigPDF, self.bkgPDF), RooArgList(Nsig, Nbkg), True)
@@ -289,14 +324,14 @@ class pubplots:
         if not self.blinding:
             self.data.plotOn(plotFrame,
                              RooFit.Binning(Nbins),
-                             RooFit.MarkerSize(self.dataMarkerSize),
-                             RooFit.MarkerStyle(self.dataMarkerStyle),
+                            #  RooFit.MarkerSize(self.dataMarkerSize),
+                            #  RooFit.MarkerStyle(self.dataMarkerStyle),
                              RooFit.XErrorSize(self.dataXErrorBarSize))
         else:
             self.blindData.plotOn(plotFrame,
                                   RooFit.NormRange('left,right'),
-                                  RooFit.MarkerSize(self.dataMarkerSize),
-                                  RooFit.MarkerStyle(self.dataMarkerStyle),
+                                #   RooFit.MarkerSize(self.dataMarkerSize),
+                                #   RooFit.MarkerStyle(self.dataMarkerStyle),
                                   RooFit.XErrorSize(self.dataXErrorBarSize),
                                   RooFit.Name('h_blind_data'))
 
@@ -346,11 +381,6 @@ class pubplots:
 
         # (Optional) Make plots for residuals
         if residuals:
-            # residFrame.SetLabelSize(self.frameLabelSize*4, 'XY')
-            # residFrame.GetXaxis().SetTitleSize(self.frameLabelSize)
-            # residFrame.GetXaxis().SetTitleOffset(self.frameAxisTitleOffset-0.5)
-            # residFrame.GetYaxis().SetTitleSize(self.frameLabelSize)
-            # residFrame.GetYaxis().SetTitleOffset(self.frameAxisTitleOffset)
             plotFrame.SetXTitle('')
             plotFrame.SetLabelSize(0, 'X')
 
