@@ -19,14 +19,22 @@ def inspect_file (fileNames, meson='rho'):
         chain.Add(fileName)
 
     df = RDataFrame(chain)
-    
+
     dfNew = (df.Define('GenPhiPolarizationAngle', 'getPhiPolarizationAngle(GenPart_pdgId,\
                                                    GenPart_genPartIdxMother,\
-                                                   GenPart_pt, GenPart_eta, GenPart_phi, GenPart_mass)'))
-    hist = dfNew.Histo1D('GenPhiPolarizationAngle')
-    c = TCanvas()
-    hist.Draw()
-    c.SaveAs('test_polarization.png')
+                                                   GenPart_pt, GenPart_eta, GenPart_phi, GenPart_mass)')
+               .Define('GenPhiCosinePolarizationAngle', 'TMath::Cos(GenPhiPolarizationAngle)')
+            )
+    hist1 = dfNew.Histo1D('GenPhiPolarizationAngle')
+    hist2 = dfNew.Histo1D('GenPhiCosinePolarizationAngle')
+    c1 = TCanvas()
+    hist1.Draw()
+    c1.SaveAs('test_polarization.png')
+    c1.Close()
+    c2 = TCanvas()
+    hist2.Draw()
+    c2.SaveAs('test_cosine_polarization.png')
+    c2.Close()
 
 if __name__=='__main__':
     dirName = '/data/submit/cms/store/user/mariadlf/nano/D01/'
