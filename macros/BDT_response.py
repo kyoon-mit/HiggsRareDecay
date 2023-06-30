@@ -45,7 +45,6 @@ def getBDTResponse(fileName):
     """
     BDTFile = TFile.Open(fileName, 'READ')
     testTree = BDTFile.Get('dataset/TestTree')
-    #cuts = [(i/2. - 3.)  for i in range(0, 25)] # [-3.0, -2.5, ... , 8.5, 9.0]
     cuts = [round(i*0.1 - 1., 1) for i in range(0, 21)] # [-1.0, -0.9, ... , 0.9, 1.0]
     print('Cut\t||\tTP \tFP \tFN \tTN \tTPR \t TNR \tPPV \tNPV \tACC \tF1')
     for cut in cuts:
