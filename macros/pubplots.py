@@ -36,7 +36,6 @@ class pubplots:
         self.Nsig = None
         self.Nbkg = None
         self.Nevents = 0
-        self.blinding = True
 
         # Attributes for beautifying the plotting area
         # self.frameLabelSize
@@ -90,7 +89,7 @@ class pubplots:
         """
         self.dir = directory
 
-    def getKeyVar(self, fileName, workspaceName, varName, varTitle, rangeLow, rangeHigh, blinding='True', blindLow=115, blindHigh=135, unit='GeV'):
+    def getKeyVar(self, fileName, workspaceName, varName, varTitle, rangeLow, rangeHigh, unit='GeV'):
         """
         """
         varFile = TFile.Open(path.join(self.dir, fileName), 'READ')
@@ -99,12 +98,6 @@ class pubplots:
         self.keyVar.SetTitle(varTitle)
         self.keyVar.setUnit(unit)
         self.keyVar.setRange('full', float(rangeLow), float(rangeHigh))
-        self.blinding = blinding
-        if self.blinding:
-            self.keyVar.setRange('left', float(rangeLow), float(blindLow))
-            self.keyVar.setBins(int(blindLow-rangeLow), 'left')
-            self.keyVar.setRange('right', float(blindHigh), float(rangeHigh))
-            self.keyVar.setBins(int(rangeHigh-blindHigh), 'right')
 
     def getSignalPDF(self, signalFileName, workspaceName,
                      signalPDFName, signalNormName):
@@ -154,8 +147,6 @@ class pubplots:
         w = dataFile.Get(workspaceName)
         self.data = w.data(dataName)
         self.data.SetName('data')
-        if self.blinding:
-            self.blindData = self.data.reduce(RooFit.CutRange('left,right'))
 
     def generateData(self):
         """Method to generate MC data.
@@ -302,18 +293,10 @@ class pubplots:
         max_tries = 10
         tries = 1
         while fit_status != 0:
-            if not self.blinding:
-                bkgFitResult = self.bkgPDF.fitTo(self.data,
-                                                 RooFit.Save(True),
-                                                 RooFit.Strategy(1),
-                                                 RooFit.PrintLevel(-1))
-            else:
-                bkgFitResult = self.bkgPDF.fitTo(self.blindData,
-                                                 RooFit.Range('full'),
-                                                 RooFit.Save(True),
-                                                 RooFit.Strategy(1),
-                                                 RooFit.PrintLevel(-1))
-            fit_status = bkgFitResult.status()
+            bkgFitResult = self.bkgPDF.fitTo(self.data,
+                                                RooFit.Save(True),
+                                                RooFit.Strategy(1),
+                                                RooFit.PrintLevel(-1))
             if tries >= max_tries:
                 break
             elif (fit_status != 0):
@@ -321,19 +304,11 @@ class pubplots:
                 tries += 1
 
         # Plot the data
-        if not self.blinding:
-            self.data.plotOn(plotFrame,
-                             RooFit.Binning(Nbins),
-                            #  RooFit.MarkerSize(self.dataMarkerSize),
-                            #  RooFit.MarkerStyle(self.dataMarkerStyle),
-                             RooFit.XErrorSize(self.dataXErrorBarSize))
-        else:
-            self.blindData.plotOn(plotFrame,
-                                  RooFit.NormRange('left,right'),
-                                #   RooFit.MarkerSize(self.dataMarkerSize),
-                                #   RooFit.MarkerStyle(self.dataMarkerStyle),
-                                  RooFit.XErrorSize(self.dataXErrorBarSize),
-                                  RooFit.Name('h_blind_data'))
+        self.data.plotOn(plotFrame,
+                            RooFit.Binning(Nbins),
+                        #  RooFit.MarkerSize(self.dataMarkerSize),
+                        #  RooFit.MarkerStyle(self.dataMarkerStyle),
+                            RooFit.XErrorSize(self.dataXErrorBarSize))
 
         # Plot sig + bkg model
         combPDF.plotOn(plotFrame,

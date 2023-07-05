@@ -13,7 +13,6 @@ if group=='MIT':
         iPos = 11
         varName = 'mh'
         varTitle = 'm_{#rho#gamma}'
-        blinding = False
         workspaceName = 'w'
         signalPDFName = 'crystal_ball_{}Cat_{}cat_ggH'.format(meson, cat)
         signalNormName = 'crystal_ball_{}Cat_{}cat_ggH_norm'.format(meson, cat)
@@ -38,7 +37,6 @@ if group=='MIT':
         iPos = 11
         varName = 'mh'
         varTitle = 'm_{#phi#gamma}'
-        blinding = False
         workspaceName = 'w'
         signalPDFName = 'crystal_ball_{}Cat_{}cat_ggH'.format(meson, cat)
         signalNormName = 'crystal_ball_{}Cat_{}cat_ggH_norm'.format(meson, cat)
@@ -63,7 +61,6 @@ if group=='MIT':
         iPos = 11
         varName = 'mh'
         varTitle = 'm_{#rho#gamma}'
-        blinding = False
         workspaceName = 'w'
         signalPDFName = 'crystal_ball_{}Cat_{}cat_VBFH'.format(meson, cat)
         signalNormName = 'crystal_ball_{}Cat_{}cat_VBFH_norm'.format(meson, cat)
@@ -88,7 +85,6 @@ if group=='MIT':
         iPos = 11
         varName = 'mh'
         varTitle = 'm_{#rho#gamma}'
-        blinding = False
         workspaceName = 'w'
         signalPDFName = 'crystal_ball_{}Cat_{}cat_VBFH'.format(meson, cat)
         signalNormName = 'crystal_ball_{}Cat_{}cat_VBFH_norm'.format(meson, cat)
@@ -115,7 +111,6 @@ elif group=='TO':
         iPos = 11
         varName = 'mesonGammaMass'
         varTitle = 'm_{#rho#gamma}'
-        blinding = False
         workspaceName = 'workspace_STAT_{}_{}cat_bdt0_2018'.format(meson, cat)
         signalPDFName = 'crystal_ball_{}_{}cat_bdt0_ggH'.format(meson, cat)
         signalNormName = 'crystal_ball_{}_{}cat_bdt0_ggH_norm'.format(meson, cat)
@@ -140,7 +135,6 @@ elif group=='TO':
         iPos = 11
         varName = 'mesonGammaMass'
         varTitle = 'm_{#phi#gamma}'
-        blinding = False
         workspaceName = 'workspace_STAT_{}_{}cat_bdt0_2018'.format(meson, cat)
         signalPDFName = 'crystal_ball_{}_{}cat_bdt0_ggH'.format(meson, cat)
         signalNormName = 'crystal_ball_{}_{}cat_bdt0_ggH_norm'.format(meson, cat)
@@ -161,7 +155,7 @@ elif group=='TO':
 
 Plots = pubplots(iPeriod, iPos)
 Plots.setFindFileDir(workspaceDir)
-Plots.getKeyVar(sigFileName, workspaceName, varName, varTitle, 100., 170., blinding)
+Plots.getKeyVar(sigFileName, workspaceName, varName, varTitle, 100., 170.)
 Plots.getSignalPDF(sigFileName, workspaceName, signalPDFName, signalNormName)
 Plots.getBackgroundPDF(bkgFileName, workspaceName, backgroundPDFName, backgroundNormName)
 #Plots.getData(bkgFileName, workspaceName, dataName)
