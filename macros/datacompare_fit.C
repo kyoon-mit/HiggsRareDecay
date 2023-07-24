@@ -12,20 +12,20 @@ void datacompare_fit(const char* Meson) {
     if (strcmp(Meson, "Phi") == 0) {date = "230310"; meson = "phi";}
 
     // Files
-    const char* Torino_presel_filename = Form("/work/submit/mariadlf/cards_march9/%s_%sGammaLimit/workspace_STAT_%s_GFpreselection_2018.root", date.c_str(), Meson, Meson);
-    const char* MIT_presel_sig_filename = Form("/work/submit/mariadlf/cards_march9/WS_MARCH9/Signal_GFcat__%sCat_2018_workspace.root", Meson);
-    const char* MIT_presel_bkg_filename = Form("/work/submit/mariadlf/cards_march9/WS_MARCH9/Bkg_GFcat__%sCat_2018_workspace.root", Meson);
-      const char* MIT_presel_sig_filename_ = Form("/work/submit/mariadlf/cards_march16/WS_MARCH16/Signal_GFcat__%sCat_2018_workspace.root", Meson);
-      const char* MIT_presel_bkg_filename_ = Form("/work/submit/mariadlf/cards_march16/WS_MARCH16/Bkg_GFcat__%sCat_2018_workspace.root", Meson);
-        const char* MIT_presel_sig_filename__ = Form("/work/submit/mariadlf/cards_march16/WS_MARCH16_phWP/Signal_GFcat__%sCat_2018_workspace.root", Meson);
-        const char* MIT_presel_bkg_filename__ = Form("/work/submit/mariadlf/cards_march16/WS_MARCH16_phWP/Bkg_GFcat__%sCat_2018_workspace.root", Meson);
+    const char* Torino_presel_filename = Form("/work/submit/mariadlf/JUNE22/230622_%s/workspace_STAT_%s_GFpreselection_2018.root", Meson, Meson);
+    const char* MIT_presel_sig_filename = Form("/work/submit/mariadlf/cards_JUNE26/workspaces_JUNE22_40_40/workspace_%s_GFcat_2018.root", Meson);
+    const char* MIT_presel_bkg_filename = Form("/work/submit/mariadlf/cards_JUNE26/workspaces_JUNE22_40_40/workspace_%s_GFcat_2018.root", Meson);
+      const char* MIT_presel_sig_filename_ = Form("/work/submit/mariadlf/cards_JUNE26/workspaces_JUNE22_38_38/workspace_%s_GFcat_2018.root", Meson);
+      const char* MIT_presel_bkg_filename_ = Form("/work/submit/mariadlf/cards_JUNE26/workspaces_JUNE22_38_38/workspace_%s_GFcat_2018.root", Meson);
+        // const char* MIT_presel_sig_filename__ = Form("/work/submit/mariadlf/cards_march16/WS_MARCH16_phWP/Signal_GFcat__%sCat_2018_workspace.root", Meson);
+        // const char* MIT_presel_bkg_filename__ = Form("/work/submit/mariadlf/cards_march16/WS_MARCH16_phWP/Bkg_GFcat__%sCat_2018_workspace.root", Meson);
     TFile* Torino_presel = TFile::Open(Torino_presel_filename, "READ");
     TFile* MIT_presel_sig = TFile::Open(MIT_presel_sig_filename, "READ");
     TFile* MIT_presel_bkg = TFile::Open(MIT_presel_bkg_filename, "READ");
       TFile* MIT_presel_sig_ = TFile::Open(MIT_presel_sig_filename_, "READ");
       TFile* MIT_presel_bkg_ = TFile::Open(MIT_presel_bkg_filename_, "READ");
-        TFile* MIT_presel_sig__ = TFile::Open(MIT_presel_sig_filename__, "READ");
-        TFile* MIT_presel_bkg__ = TFile::Open(MIT_presel_bkg_filename__, "READ");
+        // TFile* MIT_presel_sig__ = TFile::Open(MIT_presel_sig_filename__, "READ");
+        // TFile* MIT_presel_bkg__ = TFile::Open(MIT_presel_bkg_filename__, "READ");
 
     // Workspaces
     const char* Torino_workspace_name = Form("workspace_STAT_%s_GFpreselection_2018", Meson);
@@ -36,8 +36,8 @@ void datacompare_fit(const char* Meson) {
     RooWorkspace* MIT_workspace_bkg = (RooWorkspace*) MIT_presel_bkg->Get(MIT_workspace_name);
       RooWorkspace* MIT_workspace_sig_ = (RooWorkspace*) MIT_presel_sig_->Get(MIT_workspace_name);
       RooWorkspace* MIT_workspace_bkg_ = (RooWorkspace*) MIT_presel_bkg_->Get(MIT_workspace_name);
-        RooWorkspace* MIT_workspace_sig__ = (RooWorkspace*) MIT_presel_sig__->Get(MIT_workspace_name);
-        RooWorkspace* MIT_workspace_bkg__ = (RooWorkspace*) MIT_presel_bkg__->Get(MIT_workspace_name);
+        // RooWorkspace* MIT_workspace_sig__ = (RooWorkspace*) MIT_presel_sig__->Get(MIT_workspace_name);
+        // RooWorkspace* MIT_workspace_bkg__ = (RooWorkspace*) MIT_presel_bkg__->Get(MIT_workspace_name);
 
     // Normalizations
     float Torino_ggH_signal_norm = Torino_workspace->var(Form("crystal_ball_%s_GFpreselection_ggH_norm", Meson))->getValV();
@@ -49,18 +49,18 @@ void datacompare_fit(const char* Meson) {
       float MIT_ggH_signal_norm_ = MIT_workspace_sig_->var(Form("crystal_ball_%sCat_GFcat_ggH_norm", Meson))->getValV();
       float MIT_VBF_signal_norm_ = MIT_workspace_sig_->var(Form("crystal_ball_%sCat_GFcat_VBFH_norm", Meson))->getValV();
       float MIT_data_bkg_norm_ = MIT_workspace_bkg_->var(Form("multipdf_%sCat_GFcat_bkg_norm", Meson))->getValV();
-        float MIT_ggH_signal_norm__ = MIT_workspace_sig__->var(Form("crystal_ball_%sCat_GFcat_ggH_norm", Meson))->getValV();
-        float MIT_VBF_signal_norm__ = MIT_workspace_sig__->var(Form("crystal_ball_%sCat_GFcat_VBFH_norm", Meson))->getValV();
-        float MIT_data_bkg_norm__ = MIT_workspace_bkg__->var(Form("multipdf_%sCat_GFcat_bkg_norm", Meson))->getValV();
+        // float MIT_ggH_signal_norm__ = MIT_workspace_sig__->var(Form("crystal_ball_%sCat_GFcat_ggH_norm", Meson))->getValV();
+        // float MIT_VBF_signal_norm__ = MIT_workspace_sig__->var(Form("crystal_ball_%sCat_GFcat_VBFH_norm", Meson))->getValV();
+        // float MIT_data_bkg_norm__ = MIT_workspace_bkg__->var(Form("multipdf_%sCat_GFcat_bkg_norm", Meson))->getValV();
 
     /* For now, print out normalizations */
     std::cout << "*************************************************" << std::endl;
     std::cout << "GFcat " << Meson << "Cat signal ggH normalizations (preselection) " << std::endl;
-    std::cout << "Torino: " << Torino_ggH_signal_norm << ", MIT (March 9): " << MIT_ggH_signal_norm << ", MIT (March 16): " << MIT_ggH_signal_norm_ << ", MIT (March 16, photon working point): " << MIT_ggH_signal_norm__ << std::endl;
+    std::cout << "Torino: " << Torino_ggH_signal_norm << ", MIT (June 26, Pt: 40, 40): " << MIT_ggH_signal_norm << ", MIT (June 26, Pt: 38, 38): " << MIT_ggH_signal_norm_ << std::endl;
     std::cout << "GFcat " << Meson << "Cat signal VBF normalizations (preselection) " << std::endl;
-    std::cout << "Torino: " << Torino_VBF_signal_norm << ", MIT (March 9): " << MIT_VBF_signal_norm << ", MIT (March 16): " << MIT_VBF_signal_norm_ << ", MIT (March 16, photon WP): " << MIT_VBF_signal_norm__ << std::endl;
+    std::cout << "Torino: " << Torino_VBF_signal_norm << ", MIT (June 26, Pt: 40, 40): " << MIT_VBF_signal_norm << ", MIT (June 26, Pt: 38, 38): " << MIT_VBF_signal_norm_ << std::endl;
     std::cout << "GFcat " << Meson << "Cat background normalizations (preselection) " << std::endl;
-    std::cout << "Torino: " << Torino_data_bkg_norm << ", MIT (March 9): " << MIT_data_bkg_norm << ", MIT (March 16): " << MIT_data_bkg_norm_ << ", MIT (March 16, photon WP): " << MIT_data_bkg_norm__ << std::endl;
+    std::cout << "Torino: " << Torino_data_bkg_norm << ", MIT (June 26, Pt: 40, 40): " << MIT_data_bkg_norm << ", MIT (June 26, Pt: 38, 38): " << MIT_data_bkg_norm_ << std::endl;
     std::cout << "*************************************************" << std::endl;
 
     // DataSets & DataHists
@@ -73,19 +73,23 @@ void datacompare_fit(const char* Meson) {
       RooDataHist* MIT_ggH_data_ = (RooDataHist*) MIT_workspace_sig_->data("datahist_GFcat_ggH");
       RooDataHist* MIT_VBF_data_ = (RooDataHist*) MIT_workspace_sig_->data("datahist_GFcat_VBFH");
       RooDataHist* MIT_observed_data_ = (RooDataHist*) MIT_workspace_bkg_->data(Form("datahist_%sCat_GFcat", Meson));
-        RooDataHist* MIT_ggH_data__ = (RooDataHist*) MIT_workspace_sig__->data("datahist_GFcat_ggH");
-        RooDataHist* MIT_VBF_data__ = (RooDataHist*) MIT_workspace_sig__->data("datahist_GFcat_VBFH");
-        RooDataHist* MIT_observed_data__ = (RooDataHist*) MIT_workspace_bkg__->data(Form("datahist_%sCat_GFcat", Meson));
+        // RooDataHist* MIT_ggH_data__ = (RooDataHist*) MIT_workspace_sig__->data("datahist_GFcat_ggH");
+        // RooDataHist* MIT_VBF_data__ = (RooDataHist*) MIT_workspace_sig__->data("datahist_GFcat_VBFH");
+        // RooDataHist* MIT_observed_data__ = (RooDataHist*) MIT_workspace_bkg__->data(Form("datahist_%sCat_GFcat", Meson));
 
     // PDFs
     RooAbsPdf* Torino_ggH_pdf = Torino_workspace->pdf(Form("crystal_ball_%s_GFpreselection_ggH", Meson));
     RooAbsPdf* Torino_VBF_pdf = Torino_workspace->pdf(Form("crystal_ball_%s_GFpreselection_VBF", Meson));
     RooAbsPdf* Torino_bkg_pdf1 = Torino_workspace->pdf("chebychev_GFpreselection_bkg");
     RooAbsPdf* Torino_bkg_pdf2;
-    RooAbsPdf* MIT_ggH_pdf = MIT_workspace_sig__->pdf(Form("crystal_ball_%sCat_GFcat_ggH", Meson));
-    RooAbsPdf* MIT_VBF_pdf = MIT_workspace_sig__->pdf(Form("crystal_ball_%sCat_GFcat_VBFH", Meson));
-    RooAbsPdf* MIT_bkg_pdf1 = MIT_workspace_bkg__->pdf(Form("chebychev3_%sCat_GFcat", Meson));
-    RooAbsPdf* MIT_bkg_pdf2 = MIT_workspace_bkg__->pdf(Form("bern3_%sCat_GFcat", Meson));
+    RooAbsPdf* MIT_ggH_pdf = MIT_workspace_sig->pdf(Form("crystal_ball_%sCat_GFcat_ggH", Meson));
+    RooAbsPdf* MIT_VBF_pdf = MIT_workspace_sig->pdf(Form("crystal_ball_%sCat_GFcat_VBFH", Meson));
+    RooAbsPdf* MIT_bkg_pdf1 = MIT_workspace_bkg->pdf(Form("chebychev3_%sCat_GFcat", Meson));
+    RooAbsPdf* MIT_bkg_pdf2 = MIT_workspace_bkg->pdf(Form("bern3_%sCat_GFcat", Meson));
+      RooAbsPdf* MIT_ggH_pdf_ = MIT_workspace_sig_->pdf(Form("crystal_ball_%sCat_GFcat_ggH", Meson));
+      RooAbsPdf* MIT_VBF_pdf_ = MIT_workspace_sig_->pdf(Form("crystal_ball_%sCat_GFcat_VBFH", Meson));
+      RooAbsPdf* MIT_bkg_pdf1_ = MIT_workspace_bkg_->pdf(Form("chebychev3_%sCat_GFcat", Meson));
+      RooAbsPdf* MIT_bkg_pdf2_ = MIT_workspace_bkg_->pdf(Form("bern3_%sCat_GFcat", Meson));
     
     // RooPlots
     /* RooRealVars */
@@ -107,6 +111,9 @@ void datacompare_fit(const char* Meson) {
     MIT_ggH_pdf->plotOn(ggH_frame_MIT, LineColor(kRed), LineStyle(kDashed));
     MIT_VBF_pdf->plotOn(VBF_frame_MIT, LineColor(kRed), LineStyle(kDashed));
     MIT_bkg_pdf1->plotOn(bkg_frame_MIT, LineColor(kRed), LineStyle(kDashed));
+      // MIT_ggH_pdf_->plotOn(ggH_frame_MIT, LineColor(kRed), LineStyle(kDashed));
+      // MIT_VBF_pdf_->plotOn(VBF_frame_MIT, LineColor(kRed), LineStyle(kDashed));
+      // MIT_bkg_pdf1_->plotOn(bkg_frame_MIT, LineColor(kRed), LineStyle(kDashed));
 
     /* Configure RooPlots */
     ggH_frame_Torino->SetTitle(Form("GFcat %sCat ggH signal PDF compare (preselection)", Meson));
@@ -139,7 +146,7 @@ void datacompare_fit(const char* Meson) {
     ggH_frame_MIT->Draw();
     ggH_frame_Torino->Draw("SAME");
     legend_ggH_fit.AddEntry(ggH_frame_Torino->findObject(Form("crystal_ball_%s_GFpreselection_ggH_Norm[mesonGammaMass]", Meson)), "Torino DoubleCrystalBall", "l");
-    legend_ggH_fit.AddEntry(ggH_frame_MIT->findObject(Form("crystal_ball_%sCat_GFcat_ggH_Norm[mh]", Meson)), "MIT DoubleCrystalBall (March 16) Pt:38,38 ph=WP80", "l");
+    legend_ggH_fit.AddEntry(ggH_frame_MIT->findObject(Form("crystal_ball_%sCat_GFcat_ggH_Norm[mh]", Meson)), "MIT DoubleCrystalBall (June 26) Pt:40,40", "l");
     legend_ggH_fit.Draw();
     c_ggH_fit.SaveAs(Form("compare/presel_signal_ggH_fit_compare_GF_%s.png", Meson));
     c_ggH_fit.Close();
@@ -149,7 +156,7 @@ void datacompare_fit(const char* Meson) {
     VBF_frame_MIT->Draw();
     VBF_frame_Torino->Draw("SAME");
     legend_VBF_fit.AddEntry(VBF_frame_Torino->findObject(Form("crystal_ball_%s_GFpreselection_VBF_Norm[mesonGammaMass]", Meson)), "Torino DoubleCrystalBall", "l");
-    legend_VBF_fit.AddEntry(VBF_frame_MIT->findObject(Form("crystal_ball_%sCat_GFcat_VBFH_Norm[mh]", Meson)), "MIT DoubleCrystalBall (March 16) Pt:38,38 ph=WP80", "l");
+    legend_VBF_fit.AddEntry(VBF_frame_MIT->findObject(Form("crystal_ball_%sCat_GFcat_VBFH_Norm[mh]", Meson)), "MIT DoubleCrystalBall (June 26) Pt:40,40", "l");
     legend_VBF_fit.Draw();
     c_VBF_fit.SaveAs(Form("compare/presel_signal_VBF_fit_compare_GF_%s.png", Meson));
     c_VBF_fit.Close();
@@ -159,7 +166,7 @@ void datacompare_fit(const char* Meson) {
     bkg_frame_MIT->Draw();
     bkg_frame_Torino->Draw("SAME");
     legend_data_fit.AddEntry(bkg_frame_Torino->findObject("chebychev_GFpreselection_bkg_Norm[mesonGammaMass]"), "Torino Chebychev dof=4", "l");
-    legend_data_fit.AddEntry(bkg_frame_MIT->findObject(Form("chebychev3_%sCat_GFcat_Norm[mh]", Meson)), "MIT Chebychev dof=4 (March 16) Pt:38,38 ph=WP80", "l");
+    legend_data_fit.AddEntry(bkg_frame_MIT->findObject(Form("chebychev3_%sCat_GFcat_Norm[mh]", Meson)), "MIT Chebychev dof=4 (June 26) Pt:40,40", "l");
     legend_data_fit.Draw();
     c_data_fit.SaveAs(Form("compare/presel_bkg_observed_data_fit_compare_GF_%s.png", Meson));
     c_data_fit.Close();
