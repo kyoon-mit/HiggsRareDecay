@@ -1,6 +1,5 @@
 import uproot
 import pandas as pd
-import xgboost as xgb
 
 def root_to_pandas(filenames, treename, branches):
     """Converts ROOT NTuple to Pandas DataFrame format.
