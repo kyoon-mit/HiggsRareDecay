@@ -8,6 +8,7 @@ for the GF channel.
 Usage:
     In the terminal, do `python xgb_example.py`.
 """
+from kytools import rootio
 import uproot
 import numpy as np
 import pandas as pd
@@ -110,6 +111,7 @@ The main part
 """
 
 # Open files
+# TODO: LOAD from Json
 fname_format = '/work/submit/mariadlf/JUNE20/2018/outname_mc{}_GFcat_RhoCat_2018.root'
 bkg_filenames = [fname_format.format(i) for i in range(10,20)]
 sig_filenames = [fname_format.format(1027)]
@@ -122,8 +124,8 @@ branches = ['HCandMass',
             'w']
 
 # Convert data in ROOT files to Pandas DataFrames
-df_bkg = convert_root_to_pandas(bkg_filenames, 'events', branches)
-df_sig = convert_root_to_pandas(sig_filenames, 'events', branches)
+df_bkg = rootio.root_to_pandas(bkg_filenames, 'events', branches)
+df_sig = rootio.root_to_pandas(sig_filenames, 'events', branches)
 
 # Add extra columns
 df_bkg = define_variables(df_bkg, signal=False)
