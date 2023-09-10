@@ -224,7 +224,7 @@ class FitIt:
             fname (str): File name to store your workspace.
             path (str, optional): Directory name to save your workspace.
         """
-        self._workspace
+        print ('{}kytools: Importing contents to workspace {}.{}'.format('\033[1;36m', self._workspace.GetName(), '\033[0m'))
         for _, data in self._data.items():
             getattr(self._workspace, 'import')(data)
         for _, pdf in self._pdf.items():
