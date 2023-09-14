@@ -22,6 +22,7 @@ global global_params
 global_params = {'prod': 'GF',
                  'Meson': 'Rho',
                  'json_path': path.abspath(path.join(environ['HRARE_DIR'], 'json/bdtoutput.json')),
+                 'json_obj_key': 'maria_jul22_1thread_local_copy'}
 
 ### File I/O
 print ('Getting list of ROOT files from {}' + global_params['json_path'])
