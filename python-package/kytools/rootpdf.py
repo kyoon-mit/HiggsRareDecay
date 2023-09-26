@@ -85,13 +85,13 @@ class Models:
                 polynomial of 2nd order, I would provide for this argument, e.g.
                     coeffs=[(.2, 0., .5), (.1, 0., 1.), (.1, 0., 1.)]
         """
-        coefflist = RooArgList('bern_coeffs')
+        coefflist = RooArgList('bern{}_coeffs'.format(degree))
         if not len(coeff_vals) == (degree+1):
             raise Exception('Length of coeff_vals must be equal to the degrees of freedom.')
         for i in range(0, degree+1):
             if not len(coeff_vals[i]) == 3:
                 raise Exception('Each item in coeff_vals must be a tuple or list of length 3.')
-            coeff = RooRealVar('bern_c{}_{}'.format(i, suffix), 'bern0', coeff_vals[i][0], coeff_vals[i][1], coeff_vals[i][2])
+            coeff = RooRealVar('bern_c{}_{}'.format(i, suffix), 'bern_c{}'.format(i), coeff_vals[i][0], coeff_vals[i][1], coeff_vals[i][2])
             self._varlist.append(coeff)
             coefflist.add(coeff)
         pdfname = 'bern{}_{}'.format(degree, suffix)
