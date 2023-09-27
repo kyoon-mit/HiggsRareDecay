@@ -2,7 +2,7 @@
 Apply MVA
 =========================================
 
-This is a module to test MVA models or reproduce the same results.
+This is a macro to test MVA models or reproduce the same results.
 
 Usage:
     In the terminal, do `python apply_mva.py`.
@@ -19,13 +19,13 @@ print(f"Pool size = {poolSize}")
 prod = 'GF'
 Meson = 'Rho'
 json_path = path.abspath(path.join(environ['HRARE_DIR'], 'json/bdtoutput.json'))
-save_path = path.abspath(path.join(environ['HRARE_DIR'], 'sync_studies/output'))
-file_spec = 'giulio_sep12_mva_sync_copy'
-tree_name = 'tree_output_forMVA'
-mva_defines_spec = 'TO_mva_defines'
-mva_redefines_spec = 'TO_mva_redefines'
-mva_weights_spec = ('sync_studies', 'TO_gf_rho_sep12')
-mva_nvars = 4
+save_path = path.abspath(path.join(environ['HRARE_DIR'], 'sync_studies/mva_test_files'))
+file_spec = 'maria_aug10_polarized_threadfixed_local_copy'
+tree_name = 'events'
+mva_defines_spec = 'MIT_mva_defines'
+mva_redefines_spec = 'MIT_mva_redefines'
+mva_weights_spec = ('hig-23-005', 'MIT_gf_rho_aug30')
+mva_nvars = 10
 mva_col_name = 'MVAdisc_sync_studies'
 
 ### File I/O
