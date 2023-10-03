@@ -1,6 +1,6 @@
 import uproot
 import pandas as pd
-from ROOT import RDataFrame
+from ROOT import RDataFrame, std
 
 def root_to_pandas(filenames, treename, branches):
     """Converts ROOT NTuple to Pandas DataFrame format.
@@ -31,7 +31,7 @@ def root_to_rdf(filename, treename, defines=[], redefines=[]):
     along with the old.
 
     Args:
-        filename (str or ROOT.std.vector): Name of the ROOT file.
+        filename (str or list(str)): Name(s) of the ROOT file(s).
         treename (str): Name of the TTree.
         defines (list((str, str)), optional): List containing new column definitions.
             Defaults to [].
@@ -40,8 +40,23 @@ def root_to_rdf(filename, treename, defines=[], redefines=[]):
 
     Returns:
         rdf (ROOT.RDataFrame): ROOT RDataFrame object.
+
+    Raises:
+        TypeError: If filename is neither str nor list(str).
     """
-    rdf_ = RDataFrame(treename, filename)
+    if type(filename) is list:
+        filenames_C = std.vector('string')()
+        print('rootio: adding the following files to RDataFrame.')
+        for fname in filename:
+            print(f'\t{fname}')
+            filenames_C.push_back(fname)
+        rdf_ = RDataFrame(treename, filenames_C)
+    elif type(filename) is str:
+        print('rootio: adding the following file to RDataFrame.')
+        print(f'\t{filename}')
+        rdf_ = RDataFrame(treename, filename)
+    else:
+        raise TypeError('Argument provided for filename is neither str nor list(str)')
     for def_ in defines:
         rdf_ = rdf_.Define(def_[0], def_[1])
     for redef_ in redefines:
