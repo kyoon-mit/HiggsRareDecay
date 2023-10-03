@@ -2,7 +2,7 @@
 Apply MVA
 =========================================
 
-This is a macro to test MVA models or reproduce the same results.
+This is a customized macro to test MVA models or reproduce the same results.
 
 Usage:
     In the terminal, do `python apply_mva.py`.
@@ -11,22 +11,29 @@ from os import path, environ
 from kytools import rootio
 import json
 import ROOT
+import argparse
 
 poolSize = ROOT.GetThreadPoolSize()
 print(f"Pool size = {poolSize}")
 
+parser = argparse.ArgumentParser()
+parser.add_argument('BDTID')
+args = parser.parse_args()
+
 ### Parameters
+bdtid = args.BDTID
 prod = 'GF'
 Meson = 'Rho'
 json_path = path.abspath(path.join(environ['HRARE_DIR'], 'json/bdtoutput.json'))
-save_path = path.abspath(path.join(environ['HRARE_DIR'], 'sync_studies/mva_test_files'))
-file_spec = 'maria_aug10_polarized_threadfixed_local_copy'
+# save_path = path.abspath(path.join(environ['HRARE_DIR'], 'sync_studies/mva_test_files'))
+save_path = '/work/submit/kyoon/RareHiggs/test/2023/mva_test_files'
+file_spec = 'maria_sep29_wp80'
 tree_name = 'events'
 mva_defines_spec = 'MIT_mva_defines'
 mva_redefines_spec = 'MIT_mva_redefines'
-mva_weights_spec = ('hig-23-005', 'MIT_gf_rho_aug30')
-mva_nvars = 10
-mva_col_name = 'MVAdisc_sync_studies'
+mva_weights_spec = ('tests', 'MIT_gf_rho_oct1_wp80_8vars_mh115-135')
+mva_nvars = 8
+mva_col_name = f'MVAdisc_{bdtid}'
 
 ### File I/O
 print (f'Getting list of ROOT files from {json_path}')
@@ -39,18 +46,9 @@ bkg_filenames, sig_filenames =\
 ### Apply new columns and MVA
 mva_defines = json_file['mva_defines'][mva_defines_spec]
 mva_redefines = json_file['mva_defines'][mva_redefines_spec]
-mva_weights = json_file['mva_weights'][mva_weights_spec[0]][mva_weights_spec[1]]
-sig_filenames_C = ROOT.std.vector('string')()
-bkg_filenames_C = ROOT.std.vector('string')()
-print('Converting the following files to RDataFrame:')
-for fname in sig_filenames:
-    print(f'\t{fname}')
-    sig_filenames_C.push_back(fname)
-for fname in bkg_filenames:
-    print(f'\t{fname}')
-    bkg_filenames_C.push_back(fname)
-sig_rdf = rootio.root_to_rdf(sig_filenames_C, tree_name, mva_defines, mva_redefines)
-bkg_rdf = rootio.root_to_rdf(bkg_filenames_C, tree_name, mva_defines, mva_redefines)
+mva_weights = json_file['mva_weights'][mva_weights_spec[0]][mva_weights_spec[1]][bdtid]
+sig_rdf = rootio.root_to_rdf(sig_filenames, tree_name, mva_defines, mva_redefines)
+bkg_rdf = rootio.root_to_rdf(bkg_filenames, tree_name, mva_defines, mva_redefines)
 #ROOT.RDF.Experimental.AddProgressbar(rdf)
 
 process_string = f'''
@@ -61,10 +59,12 @@ ROOT.gInterpreter.ProcessLine(process_string)
 variables = ROOT.model.GetVariableNames()
 
 sig_rdf_mva = sig_rdf.Define(mva_col_name, ROOT.computeModel, list(variables))
+sig_rdf_mva = sig_rdf_mva.Redefine(mva_col_name, f'{mva_col_name}[0]')
 bkg_rdf_mva = bkg_rdf.Define(mva_col_name, ROOT.computeModel, list(variables))
-sig_outfile_name = path.join(save_path, f'{file_spec}_sig.root')
-bkg_outfile_name = path.join(save_path, f'{file_spec}_bkg.root')
-sig_rdf_mva.Snapshot(tree_name, sig_outfile_name)
+bkg_rdf_mva = bkg_rdf_mva.Redefine(mva_col_name, f'{mva_col_name}[0]')
+sig_outfile_name = path.join(save_path, f'{mva_weights_spec[1]}_{bdtid}_sig.root')
+bkg_outfile_name = path.join(save_path, f'{mva_weights_spec[1]}_{bdtid}_bkg.root')
+sig_rdf_mva.Snapshot(tree_name, sig_outfile_name, ['HCandMass', mva_col_name])
 print(f'Saved BDT result on signal to:\n\t{sig_outfile_name}')
-bkg_rdf_mva.Snapshot(tree_name, bkg_outfile_name)
+bkg_rdf_mva.Snapshot(tree_name, bkg_outfile_name, ['HCandMass', mva_col_name])
 print(f'Saved BDT result on background to:\n\t{bkg_outfile_name}')
