@@ -14,7 +14,7 @@ import json
 from matplotlib import pyplot as plt
 # TODO: Parse arguments
 
-def get_pandas_dataframes(prod, Meson, json_path, json_obj_key, tree_name, features, mva_disc, **kwargs):
+def get_pandas_dataframes(prod, Meson, json_path, json_obj_key, bdtid, tree_name, features, mva_disc, **kwargs):
     """Converts the given TTree in ROOT files into pandas.DataFrame's.
 
     This method takes as input strings which specify the path of the JSON file,
@@ -28,6 +28,8 @@ def get_pandas_dataframes(prod, Meson, json_path, json_obj_key, tree_name, featu
         Meson (str): Name of the meson, with the first letter capitalized.
         json_path (str): Full path to the JSON file.
         json_obj_key (str): JSON key to the list of the names of ROOT files.
+        bdtid (str): JSON key to the BDT training version. If '', it will
+            not search for this key.
         tree_name (str): Name of the TTree in the ROOT file.
         features (list(str)): The MVA input variables to include in the pandas.DataFrame.
             It is okay to pass variables that are not used in training.
@@ -44,16 +46,22 @@ def get_pandas_dataframes(prod, Meson, json_path, json_obj_key, tree_name, featu
     print (f'Getting list of ROOT files from {json_path}')
     json_file = json.load(open(json_path))
     filenames = json_file['root_files'][json_obj_key]
-    bkg_filenames, sig_filenames =\
-        filenames[f'{prod}_{Meson}_bkg'],\
-        filenames[f'{prod}_{Meson}_sig']
+    if bdtid=='':
+        bkg_filenames, sig_filenames =\
+            filenames[f'{prod}_{Meson}_bkg'],\
+            filenames[f'{prod}_{Meson}_sig']
+    else:
+        bkg_filenames, sig_filenames =\
+            filenames[f'{prod}_{Meson}_bkg'][bdtid],\
+            filenames[f'{prod}_{Meson}_sig'][bdtid]
     bkg_df, sig_df =\
         rootio.root_to_pandas(bkg_filenames, tree_name, branches),\
         rootio.root_to_pandas(sig_filenames, tree_name, branches)
     return bkg_df, sig_df
 
 
-def compute_mva_correlation(sig_df, bkg_df, mva_disc, save_path, save_suffix, matrix=True, scatter=True, terminal=False, **kwargs):
+def compute_mva_correlation(sig_df, bkg_df, mva_disc, save_path, save_suffix, matrix=True, scatter=True, terminal=False,
+                            x_col='', xlow=0, xhigh=1e6, **kwargs):
     """Computes numerical and graphical correlations from the given pandas.DataFrame's.
 
     Each and every variable in the pandas.DataFrame object is compared against
@@ -82,6 +90,11 @@ def compute_mva_correlation(sig_df, bkg_df, mva_disc, save_path, save_suffix, ma
             Defaults to True.
         terminal (bool, optional): Whether to show results in the terminal.
             Defaults to True.
+        x_col (str, optional): If the sig_df and bkg_df should be truncated based
+            on the range of a variable, provide the name of the variable here.
+            Defaults to ''.
+        xlow (float, optional): Low range of the truncated variable.
+        xhigh (float, optional): High range of the truncated variable.
         **kwargs (optional): Other arguments that are passed but not used.
             This is to avoid getting an error in the case where **dict is passed and
             there are too many keys.
@@ -90,13 +103,18 @@ def compute_mva_correlation(sig_df, bkg_df, mva_disc, save_path, save_suffix, ma
         None
     """
     if not path.exists(save_path): makedirs(save_path)
+    print(f'Saving to {save_path}')
+    # Truncate based on variable
+    if x_col != '':
+        bkg_df = bkg_df.loc[(xlow <= bkg_df[x_col]) & (bkg_df[x_col] < xhigh)]
+        sig_df = sig_df.loc[(xlow <= sig_df[x_col]) & (sig_df[x_col] < xhigh)]
     # Calculate correlation matrix
     if matrix:
         bkg_corr = bkg_df.corr(method='pearson').to_string()
         sig_corr = sig_df.corr(method='pearson').to_string()
         text_file_name = path.join(save_path, f'CORRELATION_MATRIX_{save_suffix}.txt')
         text_input = [f'<Background>\n{bkg_corr}',
-                      '\n',
+                      '\n\n',
                       f'<Signal>\n{sig_corr}']
         with open(text_file_name, 'wt') as txtfile:
             txtfile.writelines(text_input)
@@ -108,6 +126,7 @@ def compute_mva_correlation(sig_df, bkg_df, mva_disc, save_path, save_suffix, ma
         sig_columns.remove(mva_disc)
         bkg_columns.remove(mva_disc)
         for col in list(set(sig_columns).intersection(bkg_columns)):
+            plt.close()
             ax_sig = sig_df.plot.scatter(x=col, y=mva_disc, c='Red', s=2.5, alpha=0.15)
             ax_sig.set_title(f'Signal: {save_suffix}\n{mva_disc} vs. {col}')
             plt.savefig(path.join(save_path, f'SCATTER_PLOT_sig_{mva_disc}_VS_{col}_{save_suffix}.png'),
@@ -168,6 +187,7 @@ def sliced_hams(sig_df, bkg_df, x_col, y_col, xbins, save_path, save_suffix, **k
         None
     """
     if not path.exists(save_path): makedirs(save_path)
+    print(f'Saving to {save_path}')
     if len(xbins) < 2:
         raise ValueError('The list must have at least two elements.')
     sig_y_values, bkg_y_values = [], []
@@ -184,6 +204,7 @@ def sliced_hams(sig_df, bkg_df, x_col, y_col, xbins, save_path, save_suffix, **k
         bkg_y_values.append(bkg_sliced_ham[y_col])
     # TODO: change the following lines to for loop
     # Signal unnormalized bar charts
+    plt.close()
     plt.hist(sig_y_values, density=False, histtype='bar', label=sliced_labels)
     plt.legend(prop={'size': 10})
     plt.title(f'Signal: {save_suffix}\n{y_col} in bins of {x_col}')
@@ -236,14 +257,16 @@ def sliced_hams(sig_df, bkg_df, x_col, y_col, xbins, save_path, save_suffix, **k
     plt.ylabel('Events')
     plt.savefig(path.join(save_path, f'HISTOGRAM_STEP_NORMED_bkg_{y_col}_BINS_{x_col}_{save_suffix}.png'),
                 dpi=1000, pad_inches=0.05)
+    plt.close()
     return
 
 if __name__=='__main__':
     ### Common Parameters
     prod = 'GF'
-    Meson = 'Rho'
+    Meson = 'Phi'
+    mH_low, mH_high = 110, 160
     json_path = path.abspath(path.join(environ['HRARE_DIR'], 'json/bdtoutput.json'))
-    save_path = path.abspath(path.join(environ['HRARE_DIR'], 'sync_studies/output'))
+    save_path = path.abspath('/work/submit/kyoon/HiggsRareDecay/NOV1_output')
 
     ### TO Parameters
     TO_params = {
@@ -264,29 +287,48 @@ if __name__=='__main__':
         'prod': prod,
         'Meson': Meson,
         'json_path': json_path,
-        'save_path': path.join(save_path, 'MIT_mva'),
-        'save_suffix': 'sync_studies_maria_aug10_pol_threadfixed',
-        'json_obj_key': 'sync_studies_maria_aug10_polarized_threadfixed_local_copy',
+        'save_path': path.join(save_path, 'MIT_nov1_mva'),
+        'save_suffix': f'MIT_{prod.lower()}_{Meson.lower()}_nov1_wp80_8vars_mh{mH_low}-{mH_high}', # 'sync_studies_maria_aug10_pol_threadfixed',
+        'json_obj_key': 'maria_nov1',
+        'bdtid': '',
         'tree_name': 'events',
-        'features': ['photon_pt__div_HCandMass', 'meson_pt__div_HCandMass',
-                     'photon_eta', 'photon_mvaID', 'DeepMETResolutionTune_pt',
-                     'meson_iso', 'meson_trk1_eta', 'dEtaGammaMesonCand__div_HCandMass',
-                     'nGoodJets', 'HCandPT__div_HCandMass', 'HCandMass'],
+        # 'features': ['HCandPT', 'HCandPT__div_HCandMass', 
+        #              'photon_pt', 'photon_pt__div_HCandMass', 'photon_pt__div_HCandPT',
+        #              'meson_pt', 'meson_pt__div_HCandMass', 'meson_pt__div_HCandPT',
+        #              'nPhoton', 'nGoodPhotons',
+        #              'photon_eta', 'photon_mvaID',
+        #              'goodMeson_trk1_eta', 'goodMeson_trk2_eta',
+        #              'goodMeson_trk1_pt', 'goodMeson_trk2_pt',
+        #              'goodMeson_DR', 'goodMeson_mass', 'goodMeson_massErr',
+        #              'goodMeson_bestVtx_X', 'goodMeson_bestVtx_Y', 'goodMeson_bestVtx_Z',
+        #              'goodMeson_vtx_prob', 'goodMeson_vtx_chi2dof', 'goodMeson_bestVtx_idx',
+        #              'DeepMETResolutionTune_pt', 'DeepMETResolutionTune_phi',
+        #              'dPhiGammaMesonCand', 'dPhiGammaMesonCand__div_HCandMass',
+        #              'dEtaGammaMesonCand', 'dEtaGammaMesonCand__div_HCandMass',
+        #              'meson_iso',
+        #              'nGoodJets', 'HCandMass'],
+        'x_col': 'HCandMass',
+        'xlow': mH_low,
+        'xhigh': mH_high,
+        'features': ['HCandMass'],
         'mva_disc': 'MVAdisc'
     }
 
     ### Get pandas.DataFrame's
-    TO_params['bkg_df'], TO_params['sig_df'] = get_pandas_dataframes(**TO_params)
+    # TO_params['bkg_df'], TO_params['sig_df'] = get_pandas_dataframes(**TO_params)
     MIT_params['bkg_df'], MIT_params['sig_df'] = get_pandas_dataframes(**MIT_params)
 
     ### Compute correlation
-    compute_mva_correlation(terminal=False, **TO_params)
-    compute_mva_correlation(terminal=False, **MIT_params)
+    # compute_mva_correlation(terminal=False, **TO_params)
+    compute_mva_correlation(terminal=False, matrix=True, scatter=False, **MIT_params)
 
     ### Create histograms of MVA discriminator in bins of the Higgs mass
-    sliced_hams(x_col='mesonGammaMass', y_col=TO_params['mva_disc'],
-                xbins=[100., 110., 120., 130., 140., 150.],
-                **TO_params)
-    sliced_hams(x_col='HCandMass', y_col=MIT_params['mva_disc'],
-                xbins=[100., 110., 120., 130., 140., 150.],
-                **MIT_params)
+    # sliced_hams(x_col='mesonGammaMass', y_col=TO_params['mva_disc'],
+    #             xbins=[100., 110., 120., 130., 140., 150.],
+    #             **TO_params)
+    # sliced_hams(x_col='HCandMass', y_col=MIT_params['mva_disc'],
+    #             xbins=[100., 110., 120., 130., 140., 150., 160., 170.],
+    #             **MIT_params)
+    # sliced_hams(x_col=MIT_params['mva_disc'], y_col='HCandMass',
+    #             xbins=[-1., -.5, 0., .5, 1.],
+    #             **MIT_params)
